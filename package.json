@@ -1,0 +1,42 @@
+{
+  "name": "optimus",
+  "version": "0.0.0",
+  "description": "Transformer service for user repositories",
+  "main": "index.js",
+  "scripts": {
+    "doc": "jsdoc index.js lib/ -d doc/; open -a 'Google Chrome' doc/index.html",
+    "test": "jshint index.js lib/ && lab -v -c test/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodeNow/optimus.git"
+  },
+  "jshintConfig": {
+    "node": true,
+    "curly": true
+  },
+  "keywords": [
+    "filesystem",
+    "transformation",
+    "service"
+  ],
+  "author": "Ryan Sandor Richards <ryan@runnable.com> (http://www.runnable.com)",
+  "bugs": {
+    "url": "https://github.com/CodeNow/optimus/issues"
+  },
+  "homepage": "https://github.com/CodeNow/optimus",
+  "devDependencies": {
+    "code": "^1.4.0",
+    "jsdoc": "^3.3.0-beta3",
+    "jshint": "^2.7.0",
+    "lab": "^5.5.1",
+    "sinon": "^1.14.1"
+  },
+  "dependencies": {
+    "cluster-man": "^1.0.0",
+    "express": "^4.12.3",
+    "fs-transform": "^1.0.1",
+    "loadenv": "^1.0.3",
+    "monitor-dog": "^1.1.2"
+  }
+}
