@@ -3,6 +3,9 @@
 require('loadenv')('optimus:env');
 var ClusterManager = require('cluster-man');
 var monitor = require('monitor-dog');
+var debug = require('debug');
+var info = debug('optimus:info');
+var error = debug('optimus:error');
 var app = require('./lib/app');
 
 /**
@@ -15,6 +18,7 @@ var app = require('./lib/app');
  * Master process.
  */
 function master() {
+  info('Master process started.');
   monitor.histogram('status', 1);
 }
 
@@ -22,7 +26,15 @@ function master() {
  * Worker process.
  */
 function worker() {
-  app.listen(process.env.PORT);
+  var server = app.listen(process.env.PORT, function (err) {
+    if (err) {
+      error('Application start error: ', + err.stack);
+      return process.exit(1);
+    }
+    var host = server.address().address;
+    var port = server.address().port;
+    info('Server listening on port http://' + address + ':' + port);
+  });
 }
 
 /**
@@ -31,6 +43,7 @@ function worker() {
  * @param {function} done Called when we are done.
  */
 function beforeExit(err, done) {
+  info('Master process exiting: ' + err.stack);
   monitor.histogram('status', 0);
   done();
 }
