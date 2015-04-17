@@ -33,7 +33,7 @@
     "sinon": "^1.14.1"
   },
   "dependencies": {
-    "cluster-man": "^1.0.0",
+    "cluster-man": "^1.1.0",
     "express": "^4.12.3",
     "fs-transform": "^1.0.1",
     "loadenv": "^1.0.3",
