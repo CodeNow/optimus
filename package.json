@@ -41,7 +41,7 @@
     "debug": "^2.1.3",
     "express": "^4.12.3",
     "express-boom": "^0.3.0",
-    "fs-transform": "^1.0.1",
+    "fs-transform": "^2.0.0",
     "loadenv": "^1.0.3",
     "monitor-dog": "^1.1.2"
   }

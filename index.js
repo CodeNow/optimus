@@ -33,7 +33,7 @@ function worker() {
     }
     var host = server.address().address;
     var port = server.address().port;
-    info('Server listening on port http://' + address + ':' + port);
+    info('Server listening on port http://' + host + ':' + port);
   });
 }
 

@@ -1,0 +1,175 @@
+'use strict';
+
+var Lab = require('lab');
+var lab = exports.lab = Lab.script();
+var describe = lab.describe;
+var it = lab.it;
+var beforeEach = lab.beforeEach;
+var afterEach = lab.afterEach;
+var Code = require('code');
+var expect = Code.expect;
+var sinon = require('sinon');
+
+require('loadenv')('optimus:env');
+var Transformer = require('fs-transform');
+var monitor = require('monitor-dog');
+var transform = require('../lib/transform');
+var repository = require('../lib/repository');
+var MockResponse = require('./fixtures/mock-response');
+
+describe('transform', function() {
+  var rootPath = '/tmp/example';
+  var response = new MockResponse();
+  var fetchTimer = { stop: function() {} };
+  var transformTimer = { stop: function() {} };
+  var transformer = {
+    warnings: ['A warning', 'Another warning'],
+    getDiff: function() { return 'woot'; },
+    getScript: function() { return 'sauce'; }
+  };
+
+  beforeEach(function (done) {
+    sinon.stub(repository, 'fetch').yieldsAsync(null, rootPath);
+    sinon.stub(Transformer, 'dry').yieldsAsync(null, transformer);
+    sinon.spy(response.boom, 'badRequest');
+    sinon.stub(monitor, 'timer')
+      .onFirstCall().returns(fetchTimer)
+      .onSecondCall().returns(transformTimer);
+    sinon.spy(fetchTimer, 'stop');
+    sinon.spy(transformTimer, 'stop');
+    done();
+  });
+
+  afterEach(function (done) {
+    repository.fetch.restore();
+    Transformer.dry.restore();
+    response.boom.badRequest.restore();
+    monitor.timer.restore();
+    fetchTimer.stop.restore();
+    transformTimer.stop.restore();
+    done();
+  });
+
+  describe('interface', function() {
+    it('should expose the applyRules method', function(done) {
+      expect(transform.applyRules).to.be.a.function();
+      done();
+    });
+  }); // end 'interface'
+
+  describe('validations', function() {
+    it('should respond 400 if repository is missing', function(done) {
+      transform.applyRules({
+        params: { commitish: 'commitish' },
+        body: []
+      }, response);
+      expect(response.boom.badRequest.calledOnce).to.be.true();
+      expect(response.boom.badRequest.calledWith(
+        'Parameter `repo` is required.'
+      )).to.be.true();
+      done();
+    });
+
+    it('should respond 400 if commitish is missing', function(done) {
+      transform.applyRules({
+        params: { repo: 'repository' },
+        body: []
+      }, response);
+      expect(response.boom.badRequest.calledOnce).to.be.true();
+      expect(response.boom.badRequest.calledWith(
+        'Parameter `commitish` is required.'
+      )).to.be.true();
+      done();
+    });
+
+    it('should respond 400 if the body is not an array of rules', function(done) {
+      transform.applyRules({
+        params: { repo: 'repository', commitish: 'commitish' }
+      }, response);
+      expect(response.boom.badRequest.calledOnce).to.be.true();
+      expect(response.boom.badRequest.calledWith(
+        'Body must be an array of transform rules.'
+      )).to.be.true();
+      done();
+    });
+  }); // end 'validations'
+
+  describe('functionality', function() {
+    var request = {
+      params: { repo: 'repo', commitish: 'commitish' },
+      body: [
+        { action: 'rename', source: 'A', dest: 'B' },
+        { action: 'replace', search: 'foo', replace: 'bar' }
+      ]
+    };
+
+    it('should fetch the repository', function(done) {
+      response.once('json', function () {
+        expect(repository.fetch.calledOnce).to.be.true();
+        expect(repository.fetch.calledWith(
+          request.params.repo,
+          request.params.commitish
+        )).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should time the repository fetch', function(done) {
+      response.once('json', function () {
+        expect(monitor.timer.calledWith('fetch.time')).to.be.true();
+        expect(fetchTimer.stop.calledOnce).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should apply given transformations', function (done) {
+      response.once('json', function () {
+        expect(Transformer.dry.calledOnce).to.be.true();
+        expect(Transformer.dry.calledWith(rootPath, request.body)).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should time the application of transformations', function(done) {
+      response.once('json', function () {
+        expect(monitor.timer.calledWith('transform.time')).to.be.true();
+        expect(transformTimer.stop.calledOnce).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should respond with the correct data', function(done) {
+      response.once('json', function (object) {
+        expect(object.warnings).to.deep.equal(transformer.warnings);
+        expect(object.diff).to.equal(transformer.getDiff());
+        expect(object.script).to.equal(transformer.getScript());
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should respond 400 if a fetch error ocurrs', function(done) {
+      var error = new Error('Fetch error');
+      repository.fetch.yields(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+
+    it('should respond 400 if a transform error ocurrs', function(done) {
+      var error = new Error('Transform error');
+      Transformer.dry.yields(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
+    });
+  }); // end 'functionality'
+});
