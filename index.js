@@ -7,6 +7,7 @@ var debug = require('debug');
 var info = debug('optimus:info');
 var error = debug('optimus:error');
 var app = require('./lib/app');
+var fileSystem = require('./lib/file-system');
 
 /**
  * User repository transformer.
@@ -28,7 +29,7 @@ function master() {
 function worker() {
   var server = app.listen(process.env.PORT, function (err) {
     if (err) {
-      error('Application start error: ', + err.stack);
+      error('Application start error: ' + err.stack);
       return process.exit(1);
     }
     var host = server.address().address;
@@ -48,9 +49,18 @@ function beforeExit(err, done) {
   done();
 }
 
-// Start the cluster
-new ClusterManager({
-  master: master,
-  worker: worker,
-  beforeExit: beforeExit
-}).start();
+// Setup the file system and start optimus
+fileSystem.setup(function (err) {
+  if (err) {
+    error('Could not set up filesystem: ' + err.stack);
+    return process.exit(1);
+  }
+
+  // Create and start the cluster
+  var cluster = new ClusterManager({
+    master: master,
+    worker: worker,
+    beforeExit: beforeExit
+  });
+  cluster.start();
+});
