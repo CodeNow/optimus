@@ -176,5 +176,18 @@ describe('deploy-key', function() {
         done();
       });
     });
+
+    it('should allow the passing of options', function(done) {
+      var key = 'keezor/the/destroyinator';
+      var command = 'who | finger';
+      var options = { cwd: '/tmp/wutwut' };
+      var expected = 'ssh-agent sh -c \'' +
+        'ssh-add ' + deployKey.resolve(key) + ';' +
+        'who \\| finger\'';
+      deployKey.exec(key, command, options, function() {
+        expect(childProcess.exec.calledWith(expected, options)).to.be.true();
+        done();
+      });
+    });
   }); // end 'exec'
 }); // end 'deploy-key'
