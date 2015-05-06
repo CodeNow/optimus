@@ -37,6 +37,27 @@ describe('Git', function() {
     });
   }); // end 'interface'
 
+  describe('constructor', function () {
+    it('should call _setup', function(done) {
+      var _setup = sinon.spy(Git.prototype, '_setup');
+      new Git('a', 'b');
+      expect(_setup.calledWith('a', 'b')).to.be.true();
+      Git.prototype._setup.restore();
+      done();
+    });
+  });
+
+  describe('_setup', function() {
+    it('should set the appropriate instance variables', function(done) {
+      var key = 'dat/key';
+      var path = '/dat/path';
+      git._setup(key, path);
+      expect(git.key).to.equal(key);
+      expect(git.path).to.equal(path);
+      done();
+    });
+  });
+
   describe('clone', function() {
     it('should perform `git clone` for the repository', function(done) {
       var repo = 'git@github.com:Org/Repo';

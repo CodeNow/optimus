@@ -154,6 +154,7 @@ describe('transform', function() {
     response.once('json', function () {
       expect(repository.fetch.calledOnce).to.be.true();
       expect(repository.fetch.calledWith(
+        request.params.deployKeyPath,
         request.params.repo,
         request.params.commitish
       )).to.be.true();
