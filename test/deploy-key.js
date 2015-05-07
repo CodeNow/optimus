@@ -54,18 +54,18 @@ describe('deploy-key', function() {
   });
 
   describe('interface', function() {
-    it('should expose the resolve method', function(done) {
-      expect(deployKey.resolve).to.be.a.function();
+    it('should expose a cachePath method', function(done) {
+      expect(deployKey.cachePath).to.be.a.function();
+      done();
+    });
+
+    it('should expose the sshKeyPath method', function(done) {
+      expect(deployKey.sshKeyPath).to.be.a.function();
       done();
     });
 
     it('should expose the fetch method', function(done) {
       expect(deployKey.fetch).to.be.a.function();
-      done();
-    });
-
-    it('should expose the remove method', function(done) {
-      expect(deployKey.remove).to.be.a.function();
       done();
     });
 
@@ -75,18 +75,27 @@ describe('deploy-key', function() {
     });
   }); // end 'interface'
 
-  describe('resolve', function() {
-    it('should use process environment to resolve key paths', function(done) {
-      var path = 'some/key/path';
-      var expected = process.env.DEPLOY_KEY_CACHE + '/' + path;
-      expect(deployKey.resolve(path)).to.equal(expected);
+  describe('cachePath', function() {
+    it('should process environment to determine the cache path', function (done) {
+      var keyPath = 'foo/bar/baz';
+      var cachePath = process.env.DEPLOY_KEY_CACHE + '/foo.bar.baz';
+      expect(deployKey.cachePath(keyPath)).to.equal(cachePath);
       done();
     });
 
-    it('should trim leading slashes from given path', function(done) {
-      var path = '/this/is/patha';
-      var expected = process.env.DEPLOY_KEY_CACHE +  path;
-      expect(deployKey.resolve(path)).to.equal(expected);
+    it('should strip leading slashes from the keypath', function(done) {
+      var keyPath = '/gum/gum/bullet';
+      var cachePath = process.env.DEPLOY_KEY_CACHE + '/gum.gum.bullet';
+      expect(deployKey.cachePath(keyPath)).to.equal(cachePath);
+      done();
+    });
+  });
+
+  describe('sshKeyPath', function() {
+    it('should correctly resolve a path to the ssh key', function(done) {
+      var keyPath = '/go/go/gadget';
+      var sshKeyPath = process.env.DEPLOY_KEY_CACHE + '/go.go.gadget/ssh-key';
+      expect(deployKey.sshKeyPath(keyPath)).to.equal(sshKeyPath);
       done();
     });
   });
@@ -113,7 +122,7 @@ describe('deploy-key', function() {
 
     it('should pipe the object to the correct deploy key path', function(done) {
       var keyPath = 'this/is/a/key/path';
-      var fullKeypath = deployKey.resolve(keyPath);
+      var fullKeypath = deployKey.sshKeyPath(keyPath);
       deployKey.fetch(keyPath);
       expect(fs.createWriteStream.calledOnce).to.be.true();
       expect(fs.createWriteStream.calledWith(fullKeypath)).to.be.true();
@@ -142,33 +151,23 @@ describe('deploy-key', function() {
       });
     });
 
-    it('should touch the key file when skipping the fetch', function(done) {
+    it('should touch the cache directory when skipping the fetch', function(done) {
       fs.existsSync.returns(true);
-      deployKey.fetch('wat/wat', function () {
-        expect(cache.touch.calledOnce).to.be.true();
+      var keyPath = 'wat/wat';
+      deployKey.fetch(keyPath, function () {
+        expect(cache.touch.calledWith(deployKey.cachePath(keyPath)))
+          .to.be.true();
         done();
       });
     });
   }); // end 'fetch'
-
-  describe('remove', function() {
-    it('should use fs.unlink to remove the key', function(done) {
-      var keyPath = '/example/path/to/key';
-      var unlinkPath = deployKey.resolve(keyPath);
-      deployKey.remove(keyPath, function() {
-        expect(fs.unlink.calledOnce).to.be.true();
-        expect(fs.unlink.calledWith(unlinkPath)).to.be.true();
-        done();
-      });
-    });
-  }); // end 'remove'
 
   describe('exec', function() {
     it('should execute a command with the given key', function(done) {
       var keyPath = 'some/key/path';
       var command = 'rm -f /tmp/some/file';
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.resolve(keyPath) + ';' +
+        'ssh-add ' + deployKey.sshKeyPath(keyPath) + ';' +
         command +  '\'';
       deployKey.exec(keyPath, command, function () {
         expect(childProcess.exec.calledWith(expected)).to.be.true();
@@ -180,7 +179,7 @@ describe('deploy-key', function() {
       var keyPath = 'some/key/path';
       var command = 'cat ; & | \' / \\';
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.resolve(keyPath) + ';' +
+        'ssh-add ' + deployKey.sshKeyPath(keyPath) + ';' +
         'cat \\; \\& \\| \\\' / \\\\' +  '\'';
       deployKey.exec(keyPath, command, function () {
         expect(childProcess.exec.calledWith(expected)).to.be.true();
@@ -193,7 +192,7 @@ describe('deploy-key', function() {
       var command = 'who | finger';
       var options = { cwd: '/tmp/wutwut' };
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.resolve(key) + ';' +
+        'ssh-add ' + deployKey.sshKeyPath(key) + ';' +
         'who \\| finger\'';
       deployKey.exec(key, command, options, function() {
         expect(childProcess.exec.calledWith(expected, options)).to.be.true();
