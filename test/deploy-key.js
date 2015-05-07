@@ -75,14 +75,14 @@ describe('deploy-key', function() {
   describe('resolve', function() {
     it('should use process environment to resolve key paths', function(done) {
       var path = 'some/key/path';
-      var expected = process.env.DEPLOY_KEY_PATH + '/' + path;
+      var expected = process.env.DEPLOY_KEY_CACHE + '/' + path;
       expect(deployKey.resolve(path)).to.equal(expected);
       done();
     });
 
     it('should trim leading slashes from given path', function(done) {
       var path = '/this/is/patha';
-      var expected = process.env.DEPLOY_KEY_PATH +  path;
+      var expected = process.env.DEPLOY_KEY_CACHE +  path;
       expect(deployKey.resolve(path)).to.equal(expected);
       done();
     });

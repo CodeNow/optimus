@@ -7,7 +7,7 @@ var debug = require('debug');
 var info = debug('optimus:info');
 var error = debug('optimus:error');
 var app = require('./lib/app');
-var fileSystem = require('./lib/file-system');
+var cache = require('./lib/cache');
 
 /**
  * User repository transformer.
@@ -49,10 +49,10 @@ function beforeExit(err, done) {
   done();
 }
 
-// Setup the file system and start optimus
-fileSystem.setup(function (err) {
+// Initialize the cache and start the cluster
+cache.initialize(function (err) {
   if (err) {
-    error('Could not set up filesystem: ' + err.stack);
+    error('Could not initialize cache: ' + err.stack);
     return process.exit(1);
   }
 
