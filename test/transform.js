@@ -20,6 +20,7 @@ var deployKey = require('../lib/deploy-key');
 var cache = require('../lib/cache');
 
 describe('transform', function() {
+  var validRepo = 'git@github.com:org/repo';
   var rootPath = '/tmp/example';
   var response = new MockResponse();
 
@@ -35,7 +36,7 @@ describe('transform', function() {
 
   var request = {
     params: {
-      repo: 'repo',
+      repo: validRepo,
       commitish: 'commitish',
       deployKeyPath: '/deploy/key/path'
     },
@@ -94,9 +95,26 @@ describe('transform', function() {
       done();
     });
 
+    it('should respond 400 if the repository is malformed', function(done) {
+      transform.applyRules({
+        params: {
+          commitish: 'commitish',
+          deployKeyPath: '/some/path',
+          repo: 'pzzzklskd,d,---s'
+        },
+        body: []
+      }, response);
+      expect(response.boom.badRequest.calledOnce).to.be.true();
+      expect(response.boom.badRequest.calledWith(
+        'Parameter `repo` is not in the form: ' +
+        'git@github.com:Organization/Repository'
+      )).to.be.true();
+      done();
+    });
+
     it('should respond 400 if commitish is missing', function(done) {
       transform.applyRules({
-        params: { repo: 'repository', deployKeyPath: '/some/path' },
+        params: { repo: validRepo, deployKeyPath: '/some/path' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -108,7 +126,7 @@ describe('transform', function() {
 
     it('should respond 400 if the deploy key path is missing', function(done) {
       transform.applyRules({
-        params: { repo: 'repository', commitish: 'commitish' },
+        params: { repo: validRepo, commitish: 'commitish' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -121,7 +139,7 @@ describe('transform', function() {
     it('should respond 400 if the body is not an array of rules', function(done) {
       transform.applyRules({
         params: {
-          repo: 'repository',
+          repo: validRepo,
           commitish: 'commitish',
           deployKeyPath: '/some/path'
         }

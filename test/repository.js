@@ -97,16 +97,6 @@ describe('repository', function() {
       done();
     });
 
-    // TODO Possibly pulling this check out into PUT / route
-    it('should give an error if the given repo was malformed', function(done) {
-      var malformed = 'garlandlives';
-      repository.fetch('some/key', malformed, '1234', function (err) {
-        expect(err).to.not.be.null();
-        expect(err.message).to.equal('Cannot parse given repository.');
-        done();
-      });
-    });
-
     it('should check the existence of the repository directory', function(done) {
       var repo = 'git@github.com:example/sauce';
       var path = repository.getRepoPath(repo);
