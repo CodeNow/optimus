@@ -39,11 +39,8 @@ describe('repository', function() {
   describe('getRepoPath', function() {
     it('should return a correct repository cache path', function(done) {
       var repo = 'git@github.com:runnable/fs-transform';
-      var expectedPath = [
-        process.env.REPOSITORY_CACHE,
-        'runnable',
-        'fs-transform'
-      ].join('/');
+      var expectedPath = process.env.REPOSITORY_CACHE +
+        '/runnable.fs-transform';
       expect(repository.getRepoPath(repo)).to.equal(expectedPath);
       done();
     });
@@ -58,13 +55,9 @@ describe('repository', function() {
   describe('getCommitishPath', function() {
     it('should return a correct commitish cache path', function(done) {
       var repo = 'git@github.com:gannon/power';
-      var commitish = 'abcedf1234';
-      var expectedPath = [
-        process.env.COMMITISH_CACHE,
-        'gannon',
-        'power',
-        commitish
-      ].join('/');
+      var commitish = 'triforce';
+      var expectedPath = process.env.COMMITISH_CACHE +
+        '/gannon.power.triforce';
       expect(repository.getCommitishPath(repo, commitish))
         .to.equal(expectedPath);
       done();
