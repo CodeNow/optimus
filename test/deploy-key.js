@@ -17,6 +17,7 @@ var deployKey = require('../lib/deploy-key');
 var mockS3 = require('./fixtures/mock-s3');
 var noop = require('101/noop');
 var childProcess = require('child_process');
+var cache = require('../lib/cache');
 
 describe('deploy-key', function() {
   var s3 = mockS3.s3;
@@ -34,6 +35,7 @@ describe('deploy-key', function() {
     sinon.stub(childProcess, 'exec').yieldsAsync();
     sinon.stub(fs, 'existsSync').returns(false);
     sinon.stub(fs, 'unlink').yieldsAsync();
+    sinon.stub(cache, 'touch').yieldsAsync();
     done();
   });
 
@@ -47,6 +49,7 @@ describe('deploy-key', function() {
     childProcess.exec.restore();
     fs.existsSync.restore();
     fs.unlink.restore();
+    cache.touch.restore();
     done();
   });
 
@@ -135,6 +138,14 @@ describe('deploy-key', function() {
       fs.existsSync.returns(true);
       deployKey.fetch('what/whut', function () {
         expect(AWS.S3.callCount).to.equal(0);
+        done();
+      });
+    });
+
+    it('should touch the key file when skipping the fetch', function(done) {
+      fs.existsSync.returns(true);
+      deployKey.fetch('wat/wat', function () {
+        expect(cache.touch.calledOnce).to.be.true();
         done();
       });
     });
