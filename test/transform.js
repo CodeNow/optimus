@@ -17,6 +17,7 @@ var transform = require('../lib/transform');
 var repository = require('../lib/repository');
 var MockResponse = require('./fixtures/mock-response');
 var deployKey = require('../lib/deploy-key');
+var cache = require('../lib/cache');
 
 describe('transform', function() {
   var rootPath = '/tmp/example';
@@ -56,6 +57,7 @@ describe('transform', function() {
     sinon.spy(fetchTimer, 'stop');
     sinon.spy(transformTimer, 'stop');
     sinon.spy(deployKeyFetchTimer, 'stop');
+    sinon.stub(cache, 'unlock').yieldsAsync();
     done();
   });
 
@@ -68,6 +70,7 @@ describe('transform', function() {
     fetchTimer.stop.restore();
     transformTimer.stop.restore();
     deployKeyFetchTimer.stop.restore();
+    cache.unlock.restore();
     done();
   });
 
@@ -185,6 +188,34 @@ describe('transform', function() {
     response.once('json', function () {
       expect(monitor.timer.calledWith('transform.time')).to.be.true();
       expect(transformTimer.stop.calledOnce).to.be.true();
+      done();
+    });
+    transform.applyRules(request, response);
+  });
+
+  it('should handle transformation errors', function(done) {
+    var error = new Error('howdydoody');
+    Transformer.dry.yieldsAsync(error);
+    response.boom.once('badRequest', function (err) {
+      expect(err).to.equal(error);
+      done();
+    });
+    transform.applyRules(request, response);
+  });
+
+  it('should unlock the commitish directory', function(done) {
+    response.once('json', function () {
+      expect(cache.unlock.calledWith(rootPath)).to.be.true();
+      done();
+    });
+    transform.applyRules(request, response);
+  });
+
+  it('should handle unlock errors', function(done) {
+    var error = new Error('teenagemutantninjaturtles');
+    cache.unlock.yieldsAsync(error);
+    response.boom.once('badRequest', function (err) {
+      expect(err).to.equal(error);
       done();
     });
     transform.applyRules(request, response);
