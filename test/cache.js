@@ -164,10 +164,10 @@ describe('cache', function() {
     });
 
     it('should report a 500 if an error occurs', function(done) {
-      var message = 'Party on Wayne.';
-      childProcess.exec.yieldsAsync(new Error(message));
-      response.boom.once('badImplementation', function (msg) {
-        expect(msg).to.equal(message);
+      var error = new Error('Party on Wayne.')
+      childProcess.exec.yieldsAsync(error);
+      response.boom.once('badImplementation', function (err) {
+        expect(err).to.equal(error);
         done();
       });
       cache.purge({}, response);
@@ -192,10 +192,10 @@ describe('cache', function() {
     });
 
     it('should report a 500 if an error occurs', function(done) {
-      var message = 'Party on Garth.';
-      childProcess.exec.yieldsAsync(new Error(message));
-      response.boom.once('badImplementation', function (msg) {
-        expect(msg).to.equal(message);
+      var error = new Error('Party on Garth.')
+      childProcess.exec.yieldsAsync(error);
+      response.boom.once('badImplementation', function (err) {
+        expect(err).to.equal(error);
         done();
       });
       cache.purgeAll({}, response);
