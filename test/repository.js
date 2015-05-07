@@ -16,6 +16,7 @@ var childProcess = require('child_process');
 var monitor = require('monitor-dog');
 var Git = require('../lib/git');
 var repository = require('../lib/repository');
+var cache = require('../lib/cache');
 
 describe('repository', function() {
   describe('interface', function() {
@@ -85,6 +86,8 @@ describe('repository', function() {
       sinon.stub(Git.prototype, 'fetchAll').yieldsAsync();
       sinon.stub(Git.prototype, 'checkout').yieldsAsync();
       sinon.spy(Git.prototype, '_setup');
+      sinon.stub(cache, 'lock').yieldsAsync();
+      sinon.stub(cache, 'touch').yieldsAsync();
       done();
     });
 
@@ -96,6 +99,8 @@ describe('repository', function() {
       Git.prototype.fetchAll.restore();
       Git.prototype.checkout.restore();
       Git.prototype._setup.restore();
+      cache.lock.restore();
+      cache.touch.restore();
       done();
     });
 
@@ -132,7 +137,7 @@ describe('repository', function() {
 
     it('should bypass fetch if repo and commitish are cached', function(done) {
       fs.existsSync.returns(true);
-      var repo = 'git@github.com:hodor/westeros';
+      var repo = 'git@github.com:westeros/hodor';
       var commitish = 'hodoorrrrr';
       var expectedPath = repository.getCommitishPath(repo, commitish);
       repository.fetch('das/key', repo, commitish, function (err, path) {
@@ -143,6 +148,45 @@ describe('repository', function() {
         expect(Git.prototype.fetchAll.callCount).to.equal(0);
         expect(Git.prototype.checkout.callCount).to.equal(0);
         expect(path).to.equal(expectedPath);
+        done();
+      });
+    });
+
+    it('should touch the repo and commitish directories when bypassing', function(done) {
+      fs.existsSync.returns(true);
+      var repo = 'git@github.com:westeros/cersei';
+      var commitish = 'mybrotherishot';
+      var repoPath = repository.getRepoPath(repo);
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('dos/key', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(cache.touch.calledWith(repoPath)).to.be.true();
+        expect(cache.touch.calledWith(commitishPath)).to.be.true();
+        done();
+      });
+    });
+
+    it('should lock the commitish directory when bypassing', function(done) {
+      fs.existsSync.returns(true);
+      var repo = 'git@github.com:westeros/catlyn';
+      var commitish = 'imtotesundead';
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('dos/equis', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(cache.lock.calledWith(commitishPath)).to.be.true();
+        done();
+      });
+    });
+
+    it('should report errors when bypassing', function(done) {
+      var error = new Error('The dragon queen cometh');
+      fs.existsSync.returns(true);
+      cache.touch.yieldsAsync(error);
+      var repo = 'git@github.com:westeros/tyrion';
+      var commitish = 'ilikewineandbooks';
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('dos/equis', repo, commitish, function (err, path) {
+        expect(err).to.equal(error);
         done();
       });
     });
@@ -170,13 +214,15 @@ describe('repository', function() {
       });
     });
 
-    it('should not create a repository cache directory if it already exists', function(done) {
+    it('should touch the repository cache directory if it already exists', function(done) {
       fs.existsSync.onFirstCall().returns(true);
       var repo = 'git@github.com:daredevil/hitlist';
-      var command = 'mkdir -p ' + repository.getRepoPath(repo);
+      var repoPath = repository.getRepoPath(repo)
+      var command = 'mkdir -p ' + repoPath;
       repository.fetch('blind/justice', repo, 'karate', function (err) {
         if (err) { return done(err); }
         expect(childProcess.exec.calledWith(command)).to.be.false();
+        expect(cache.touch.calledWith(repoPath)).to.be.true();
         done();
       });
     });
@@ -204,7 +250,7 @@ describe('repository', function() {
       });
     });
 
-    it('should create the working directory', function(done) {
+    it('should create the commitish directory', function(done) {
       var repo = 'git@github.com:big/star';
       var commitish = 'radiocity';
       var repoPath = repository.getRepoPath(repo);
@@ -213,6 +259,33 @@ describe('repository', function() {
       repository.fetch('key', repo, commitish, function (err) {
         if (err) { return done(err); }
         expect(childProcess.exec.calledWith(command)).to.be.true();
+        done();
+      });
+    });
+
+    it('should touch the commitish directory if it already exists', function(done) {
+      fs.existsSync.onSecondCall().returns(true);
+      var repo = 'git@github.com:nin/downwardspiral';
+      var commitish = 'closer';
+      var repoPath = repository.getRepoPath(repo);
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      var command = 'cp -r ' + repoPath + ' ' + commitishPath;
+      repository.fetch('key', repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.touch.calledWith(commitishPath)).to.be.true();
+        expect(childProcess.exec.calledWith(command)).to.be.false();
+        done();
+      });
+    });
+
+    it('should lock the commitish directory', function(done) {
+      var repo = 'git@github.com:soundgarden/superunknown';
+      var commitish = 'spoonman';
+      var repoPath = repository.getRepoPath(repo);
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('key', repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.lock.calledWith(commitishPath)).to.be.true();
         done();
       });
     });
