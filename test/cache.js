@@ -13,11 +13,8 @@ var sinon = require('sinon');
 require('loadenv')('optimus:env');
 var childProcess = require('child_process');
 var cache = require('../lib/cache');
-var MockResponse = require('./fixtures/mock-response');
 
 describe('cache', function() {
-  var response = new MockResponse();
-
   beforeEach(function (done) {
     sinon.stub(childProcess, 'exec').yieldsAsync();
     done();
@@ -61,6 +58,16 @@ describe('cache', function() {
 
     it('should expose the `purgeAll` method', function(done) {
       expect(cache.purgeAll).to.be.a.function();
+      done();
+    });
+
+    it('should expose the `setPurgeInterval` method', function(done) {
+      expect(cache.setPurgeInterval).to.be.a.function();
+      done();
+    });
+
+    it('should expose the `clearPurgeInterval` method', function(done) {
+      expect(cache.clearPurgeInterval).to.be.a.function();
       done();
     });
   }); // end 'interface'
@@ -113,7 +120,7 @@ describe('cache', function() {
   }); // end 'unlock'
 
   describe('usage', function() {
-    it('should collect, tally, and report cache disk usage', function(done) {
+    it('should collect and tally cache disk usage', function(done) {
       var deployKeyUsage = '100\t' + process.env.DEPLOY_KEY_CACHE;
       var repoUsage = '200\t' + process.env.REPOSITORY_CACHE;
       var commitishUsage = '300\t' + process.env.COMMITISH_CACHE;
@@ -121,27 +128,20 @@ describe('cache', function() {
         .onFirstCall().yieldsAsync(null, deployKeyUsage)
         .onSecondCall().yieldsAsync(null, repoUsage)
         .onThirdCall().yieldsAsync(null, commitishUsage);
-      response.once('json', function (data) {
-        expect(data.total).to.equal(600);
-        expect(data.caches).to.be.an.array();
-        expect(data.caches).to.deep.include([
-          [100, process.env.DEPLOY_KEY_CACHE],
-          [200, process.env.REPOSITORY_CACHE],
-          [300, process.env.COMMITISH_CACHE]
-        ]);
+      cache.usage(function (err, bytes) {
+        if (err) { return done(err); }
+        expect(bytes).to.equal(600);
         done();
       });
-      cache.usage({}, response);
     });
 
-    it('should report a 500 if an error occurs', function(done) {
-      var message ='Something wicked, this way comes.';
-      childProcess.exec.yieldsAsync(new Error(message));
-      response.boom.once('badImplementation', function (msg) {
-        expect(msg).to.equal(message);
+    it('should gracefully handle errors', function(done) {
+      var error = new Error('Something wicked');
+      childProcess.exec.yieldsAsync(error);
+      cache.usage(function (err) {
+        expect(err).to.equal(error);
         done();
       });
-      cache.usage({}, response);
     });
   }); // end 'usage'
 
@@ -151,7 +151,8 @@ describe('cache', function() {
         '\\( -type d \'!\' -exec test -e "{}/.optimus.lock" \';\' \\) ' +
         '\\( -type d -amin +30 \\) ' +
         '-print | xargs rm -rf';
-      response.once('send', function () {
+      cache.purge(function (err) {
+        if (err) { return done(err); }
         var cmd1 = command.replace('$PATH', process.env.DEPLOY_KEY_CACHE);
         expect(childProcess.exec.calledWith(cmd1)).to.be.true();
         var cmd2 = command.replace('$PATH', process.env.REPOSITORY_CACHE);
@@ -160,17 +161,15 @@ describe('cache', function() {
         expect(childProcess.exec.calledWith(cmd3)).to.be.true();
         done();
       });
-      cache.purge({}, response);
     });
 
-    it('should report a 500 if an error occurs', function(done) {
+    it('should handle file system errors', function(done) {
       var error = new Error('Party on Wayne.')
       childProcess.exec.yieldsAsync(error);
-      response.boom.once('badImplementation', function (err) {
+      cache.purge(function (err) {
         expect(err).to.equal(error);
         done();
       });
-      cache.purge({}, response);
     });
   }); // end 'purge'
 
@@ -179,7 +178,8 @@ describe('cache', function() {
       var command = 'find $PATH -mindepth 1 -maxdepth 1 ' +
         '\\( -type d \'!\' -exec test -e "{}/.optimus.lock" \';\' \\) ' +
         '-print | xargs rm -rf';
-      response.once('send', function () {
+      cache.purgeAll(function (err) {
+        if (err) { return done(err); }
         var cmd1 = command.replace('$PATH', process.env.DEPLOY_KEY_CACHE);
         expect(childProcess.exec.calledWith(cmd1)).to.be.true();
         var cmd2 = command.replace('$PATH', process.env.REPOSITORY_CACHE);
@@ -188,17 +188,80 @@ describe('cache', function() {
         expect(childProcess.exec.calledWith(cmd3)).to.be.true();
         done();
       });
-      cache.purgeAll({}, response);
     });
 
-    it('should report a 500 if an error occurs', function(done) {
+    it('should handle file system errors', function(done) {
       var error = new Error('Party on Garth.')
       childProcess.exec.yieldsAsync(error);
-      response.boom.once('badImplementation', function (err) {
+      cache.purgeAll(function (err) {
         expect(err).to.equal(error);
         done();
       });
-      cache.purgeAll({}, response);
     });
   }); // end 'purgeAll'
+
+  describe('setPurgeInterval', function() {
+    var clock;
+
+    beforeEach(function (done) {
+      clock = sinon.useFakeTimers();
+      sinon.spy(cache, 'purge');
+      done();
+    })
+
+    afterEach(function (done) {
+      clock.restore();
+      cache.clearPurgeInterval();
+      cache.purge.restore();
+      done();
+    });
+
+    it('should set the purge interval based on the environment', function(done) {
+      cache.setPurgeInterval();
+      clock.tick(process.env.CACHE_PURGE_INTERVAL);
+      expect(cache.purge.calledOnce).to.be.true();
+      done();
+    });
+
+    it('should not set an interval if one is already exists', function(done) {
+      cache.setPurgeInterval();
+      cache.setPurgeInterval();
+      clock.tick(process.env.CACHE_PURGE_INTERVAL);
+      expect(cache.purge.calledOnce).to.be.true();
+      done();
+    });
+  }); // end 'setPurgeInterval'
+
+  describe('clearPurgeInterval', function() {
+    var clock;
+
+    beforeEach(function (done) {
+      clock = sinon.useFakeTimers();
+      sinon.spy(cache, 'purge');
+      cache.setPurgeInterval();
+      done();
+    })
+
+    afterEach(function (done) {
+      clock.restore();
+      cache.purge.restore();
+      done();
+    });
+
+    it('should clear the interval', function(done) {
+      cache.clearPurgeInterval();
+      clock.tick(process.env.CACHE_PURGE_INTERVAL);
+      expect(cache.purge.callCount).to.equal(0);
+      done();
+    });
+
+    it('should ignore multiple clears', function(done) {
+      cache.clearPurgeInterval();
+      cache.clearPurgeInterval();
+      cache.clearPurgeInterval();
+      clock.tick(process.env.CACHE_PURGE_INTERVAL);
+      expect(cache.purge.callCount).to.equal(0);
+      done();
+    });
+  }); // end 'clearPurgeInterval'
 }); // end 'cache'

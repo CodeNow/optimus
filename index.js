@@ -21,6 +21,7 @@ var cache = require('./lib/cache');
 function master() {
   info('Master process started.');
   monitor.histogram('status', 1);
+  cache.setPurgeInterval();
 }
 
 /**
