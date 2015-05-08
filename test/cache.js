@@ -149,7 +149,7 @@ describe('cache', function() {
     it('should purge cache directories', function(done) {
       var command = 'find $PATH -mindepth 1 -maxdepth 1 ' +
         '\\( -type d \'!\' -exec test -e "{}/.optimus.lock" \';\' \\) ' +
-        '\\( -type d -amin +30 \\) ' +
+        '\\( -type d -amin +' + process.env.CACHE_PURGE_AGE + ' \\) ' +
         '-print | xargs rm -rf';
       cache.purge(function (err) {
         if (err) { return done(err); }
