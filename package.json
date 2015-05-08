@@ -26,10 +26,13 @@
   },
   "homepage": "https://github.com/CodeNow/optimus",
   "devDependencies": {
+    "app-root-path": "^1.0.0",
     "code": "^1.4.0",
     "jsdoc": "^3.3.0-beta3",
     "jshint": "^2.7.0",
     "lab": "^5.5.1",
+    "request": "^2.55.0",
+    "rewire": "^2.3.3",
     "sinon": "^1.14.1"
   },
   "dependencies": {
