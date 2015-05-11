@@ -109,6 +109,16 @@ describe('deploy-key', function() {
       });
     });
 
+    it('should gracefully handle touch errors when skipping fetch', function(done) {
+      var error = new Error('touch error');
+      fs.existsSync.returns(true);
+      cache.touch.yields(error);
+      deployKey.fetch('key/path', function (err) {
+        expect(err).to.equal(error);
+        done();
+      })
+    });
+
     it('should create the cache directory for the key', function(done) {
       var key = '/yay/sauce';
       deployKey.fetch(key, function (err) {

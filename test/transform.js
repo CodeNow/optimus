@@ -27,6 +27,7 @@ describe('transform', function() {
   var deployKeyFetchTimer = { stop: function() {} };
   var fetchTimer = { stop: function() {} };
   var transformTimer = { stop: function() {} };
+  var sshKeyPath = '/some/path/ssh-key';
 
   var transformer = {
     warnings: ['A warning', 'Another warning'],
@@ -35,7 +36,7 @@ describe('transform', function() {
   };
 
   var request = {
-    params: {
+    query: {
       repo: validRepo,
       commitish: 'commitish',
       deployKeyPath: '/deploy/key/path'
@@ -47,7 +48,7 @@ describe('transform', function() {
   };
 
   beforeEach(function (done) {
-    sinon.stub(deployKey, 'fetch').yieldsAsync(null);
+    sinon.stub(deployKey, 'fetch').yieldsAsync(null, sshKeyPath);
     sinon.stub(repository, 'fetch').yieldsAsync(null, rootPath);
     sinon.stub(Transformer, 'dry').yieldsAsync(null, transformer);
     sinon.spy(response.boom, 'badRequest');
@@ -85,7 +86,7 @@ describe('transform', function() {
   describe('validations', function() {
     it('should respond 400 if repository is missing', function(done) {
       transform.applyRules({
-        params: { commitish: 'commitish', deployKeyPath: '/some/path' },
+        query: { commitish: 'commitish', deployKeyPath: '/some/path' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -97,7 +98,7 @@ describe('transform', function() {
 
     it('should respond 400 if the repository is malformed', function(done) {
       transform.applyRules({
-        params: {
+        query: {
           commitish: 'commitish',
           deployKeyPath: '/some/path',
           repo: 'pzzzklskd,d,---s'
@@ -114,7 +115,7 @@ describe('transform', function() {
 
     it('should respond 400 if commitish is missing', function(done) {
       transform.applyRules({
-        params: { repo: validRepo, deployKeyPath: '/some/path' },
+        query: { repo: validRepo, deployKeyPath: '/some/path' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -126,7 +127,7 @@ describe('transform', function() {
 
     it('should respond 400 if the deploy key path is missing', function(done) {
       transform.applyRules({
-        params: { repo: validRepo, commitish: 'commitish' },
+        query: { repo: validRepo, commitish: 'commitish' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -138,7 +139,7 @@ describe('transform', function() {
 
     it('should respond 400 if the body is not an array of rules', function(done) {
       transform.applyRules({
-        params: {
+        query: {
           repo: validRepo,
           commitish: 'commitish',
           deployKeyPath: '/some/path'
@@ -155,7 +156,7 @@ describe('transform', function() {
   it('should fetch the deploy key', function(done) {
     response.once('json', function () {
       expect(deployKey.fetch.calledOnce).to.be.true();
-      expect(deployKey.fetch.calledWith(request.params.deployKeyPath))
+      expect(deployKey.fetch.calledWith(request.query.deployKeyPath))
         .to.be.true();
       done();
     });
@@ -174,10 +175,11 @@ describe('transform', function() {
   it('should fetch the repository', function(done) {
     response.once('json', function () {
       expect(repository.fetch.calledOnce).to.be.true();
+
       expect(repository.fetch.calledWith(
-        request.params.deployKeyPath,
-        request.params.repo,
-        request.params.commitish
+        sshKeyPath, // Yielded from deployKey.fetch
+        request.query.repo,
+        request.query.commitish
       )).to.be.true();
       done();
     });

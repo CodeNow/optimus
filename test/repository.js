@@ -72,7 +72,8 @@ describe('repository', function() {
 
   describe('fetch', function() {
     beforeEach(function (done) {
-      sinon.stub(fs, 'existsSync').returns(false);
+      sinon.stub(fs, 'existsSync').returns(false)
+        .onThirdCall().returns(true);
       sinon.stub(childProcess, 'exec').yieldsAsync();
       sinon.stub(Git.prototype, 'clone').yieldsAsync();
       sinon.stub(Git.prototype, 'getSHA').yieldsAsync(null, 'somesha');
@@ -100,6 +101,7 @@ describe('repository', function() {
     it('should check the existence of the repository directory', function(done) {
       var repo = 'git@github.com:example/sauce';
       var path = repository.getRepoPath(repo);
+
       repository.fetch('a/key', repo, '3455', function (err) {
         if (err) { return done(err); }
         expect(fs.existsSync.calledWith(path + '/.git')).to.be.true();
