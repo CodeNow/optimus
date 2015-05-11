@@ -27,6 +27,7 @@
   "homepage": "https://github.com/CodeNow/optimus",
   "devDependencies": {
     "app-root-path": "^1.0.0",
+    "callback-count": "^0.1.0",
     "code": "^1.4.0",
     "jsdoc": "^3.3.0-beta3",
     "jshint": "^2.7.0",

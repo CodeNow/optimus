@@ -21,6 +21,7 @@ var cache = require('../lib/cache');
 var deployKey = require('../lib/deploy-key');
 var repository = require('../lib/repository');
 var app = require('../lib/app');
+var createCounter = require('callback-count');
 
 var fixtureCache = require('./fixtures/fixture-cache');
 var applicationRoot = require('app-root-path').toString();
@@ -156,5 +157,44 @@ describe('functional', function() {
       });
     });
 
+    it('should correctly handle multiple quick requests', function(done) {
+      var key = 'optimus-private';
+      var repo = 'git@github.com:CodeNow/optimus-private-test';
+      var commitish = 'f9394ecda04836b9453f113b37e93008c08822ee';
+      var url = 'http://127.0.0.1:' + process.env.PORT + '?' +
+        'deployKeyPath=' + encodeURIComponent(key) + '&' +
+        'commitish=' + encodeURIComponent(commitish) + '&' +
+        'repo=' + encodeURIComponent(repo);
+
+      var bodyOne = [{ action: 'replace', search: 'beta', replace: 'omega' }];
+      var bodyTwo = [{ action: 'rename', search: 'wow/D.txt', replace: 'D.txt' }];
+      var bodyThree = [{ action: 'replace', search: 'alpha', replace: 'AAA' }];
+
+      var counter = createCounter(3, done);
+
+      request.put(
+        {url: url, body: bodyOne, json: true},
+        function (err, response, body) {
+          if (err) { return done(err); }
+          counter.next();
+        }
+      );
+
+      request.put(
+        {url: url, body: bodyTwo, json: true},
+        function (err, response, body) {
+          if (err) { return done(err); }
+          counter.next();
+        }
+      );
+
+      request.put(
+        {url: url, body: bodyThree, json: true},
+        function (err, response, body) {
+          if (err) { return done(err); }
+          counter.next();
+        }
+      );
+    });
   }); // end 'PUT /'
 }); // end 'functional'
