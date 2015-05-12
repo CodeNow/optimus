@@ -39,7 +39,7 @@ describe('transform', function() {
     query: {
       repo: validRepo,
       commitish: 'commitish',
-      deployKeyPath: '/deploy/key/path'
+      deployKey: '/deploy/key/path'
     },
     body: [
       { action: 'rename', source: 'A', dest: 'B' },
@@ -86,7 +86,7 @@ describe('transform', function() {
   describe('validations', function() {
     it('should respond 400 if repository is missing', function(done) {
       transform.applyRules({
-        query: { commitish: 'commitish', deployKeyPath: '/some/path' },
+        query: { commitish: 'commitish', deployKey: '/some/path' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -100,7 +100,7 @@ describe('transform', function() {
       transform.applyRules({
         query: {
           commitish: 'commitish',
-          deployKeyPath: '/some/path',
+          deployKey: '/some/path',
           repo: 'pzzzklskd,d,---s'
         },
         body: []
@@ -115,7 +115,7 @@ describe('transform', function() {
 
     it('should respond 400 if commitish is missing', function(done) {
       transform.applyRules({
-        query: { repo: validRepo, deployKeyPath: '/some/path' },
+        query: { repo: validRepo, deployKey: '/some/path' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -125,14 +125,14 @@ describe('transform', function() {
       done();
     });
 
-    it('should respond 400 if the deploy key path is missing', function(done) {
+    it('should respond 400 if the deploy key is missing', function(done) {
       transform.applyRules({
         query: { repo: validRepo, commitish: 'commitish' },
         body: []
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
       expect(response.boom.badRequest.calledWith(
-        'Parameter `deployKeyPath` is required.'
+        'Parameter `deployKey` is required.'
       )).to.be.true();
       done();
     });
@@ -142,7 +142,7 @@ describe('transform', function() {
         query: {
           repo: validRepo,
           commitish: 'commitish',
-          deployKeyPath: '/some/path'
+          deployKey: '/some/path'
         }
       }, response);
       expect(response.boom.badRequest.calledOnce).to.be.true();
@@ -156,7 +156,7 @@ describe('transform', function() {
   it('should fetch the deploy key', function(done) {
     response.once('json', function () {
       expect(deployKey.fetch.calledOnce).to.be.true();
-      expect(deployKey.fetch.calledWith(request.query.deployKeyPath))
+      expect(deployKey.fetch.calledWith(request.query.deployKey))
         .to.be.true();
       done();
     });

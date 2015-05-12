@@ -129,7 +129,7 @@ describe('functional', function() {
 
       var params = {
         url: 'http://127.0.0.1:' + process.env.PORT + '?' +
-          'deployKeyPath=' + encodeURIComponent(key) + '&' +
+          'deployKey=' + encodeURIComponent(key) + '&' +
           'commitish=' + encodeURIComponent(commitish) + '&' +
           'repo=' + encodeURIComponent(repo),
         body: [
@@ -162,7 +162,7 @@ describe('functional', function() {
       var repo = 'git@github.com:CodeNow/optimus-private-test';
       var commitish = 'f9394ecda04836b9453f113b37e93008c08822ee';
       var url = 'http://127.0.0.1:' + process.env.PORT + '?' +
-        'deployKeyPath=' + encodeURIComponent(key) + '&' +
+        'deployKey=' + encodeURIComponent(key) + '&' +
         'commitish=' + encodeURIComponent(commitish) + '&' +
         'repo=' + encodeURIComponent(repo);
 
