@@ -4,6 +4,7 @@
   "description": "Transformer service for user repositories",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "doc": "jsdoc index.js lib/ -d doc/; open -a 'Google Chrome' doc/index.html",
     "lint": "jshint index.js lib/",
     "lab": "lab -v -c -m 10000 -a code",
