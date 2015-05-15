@@ -59,8 +59,9 @@ describe('functional', function() {
 
     before(function (done) {
       deployKey.fetch(key, function (err, path) {
+        if (err) { return done(err); }
         keyPath = path;
-        done()
+        done();
       });
     });
 
