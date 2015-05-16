@@ -176,7 +176,7 @@ describe('deploy-key', function() {
       var keyPath = 'some/key/path';
       var command = 'rm -f /tmp/some/file';
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.getSSHKeyPath(keyPath) + ';' +
+        'ssh-add ' + keyPath + ';' +
         command +  '\'';
       deployKey.exec(keyPath, command, function () {
         expect(childProcess.exec.calledWith(expected)).to.be.true();
@@ -188,7 +188,7 @@ describe('deploy-key', function() {
       var keyPath = 'some/key/path';
       var command = 'cat ; & | \' / \\';
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.getSSHKeyPath(keyPath) + ';' +
+        'ssh-add ' + keyPath + ';' +
         'cat \\; \\& \\| \\\' / \\\\' +  '\'';
       deployKey.exec(keyPath, command, function () {
         expect(childProcess.exec.calledWith(expected)).to.be.true();
@@ -201,7 +201,7 @@ describe('deploy-key', function() {
       var command = 'who | finger';
       var options = { cwd: '/tmp/wutwut' };
       var expected = 'ssh-agent sh -c \'' +
-        'ssh-add ' + deployKey.getSSHKeyPath(key) + ';' +
+        'ssh-add ' + key + ';' +
         'who \\| finger\'';
       deployKey.exec(key, command, options, function() {
         expect(childProcess.exec.calledWith(expected, options)).to.be.true();
