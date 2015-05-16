@@ -54,11 +54,10 @@ describe('functional', function() {
 
   // NOTE: This is *not* a unit test, and must be run as a suite
   describe('repository', function() {
-    var key = 'optimus-private';
     var keyPath;
 
     before(function (done) {
-      deployKey.fetch(key, function (err, path) {
+      deployKey.fetch('optimus-private', function (err, path) {
         if (err) { return done(err); }
         keyPath = path;
         done();
