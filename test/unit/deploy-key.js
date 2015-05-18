@@ -13,10 +13,10 @@ var sinon = require('sinon');
 require('loadenv')('optimus:env');
 var AWS = require('aws-sdk');
 var fs = require('fs');
-var deployKey = require('../lib/deploy-key');
+var deployKey = require('../../lib/deploy-key');
 var noop = require('101/noop');
 var childProcess = require('child_process');
-var cache = require('../lib/cache');
+var cache = require('../../lib/cache');
 
 describe('deploy-key', function() {
   var s3 = {

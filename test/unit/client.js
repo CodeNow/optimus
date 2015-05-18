@@ -10,7 +10,7 @@ var Code = require('code');
 var expect = Code.expect;
 var sinon = require('sinon');
 
-var OptimusClient = require('../client');
+var OptimusClient = require('../../client');
 var ApiClient = require('simple-api-client');
 
 describe('client', function() {

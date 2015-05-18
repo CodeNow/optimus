@@ -17,13 +17,13 @@ var fs = require('fs');
 var async = require('async');
 var request = require('request');
 var childProcess = require('child_process');
-var cache = require('../lib/cache');
-var deployKey = require('../lib/deploy-key');
-var repository = require('../lib/repository');
-var app = require('../lib/app');
+var cache = require('../../lib/cache');
+var deployKey = require('../../lib/deploy-key');
+var repository = require('../../lib/repository');
+var app = require('../../lib/app');
 var createCounter = require('callback-count');
 
-var fixtureCache = require('./fixtures/fixture-cache');
+var fixtureCache = require('../fixtures/fixture-cache');
 var applicationRoot = require('app-root-path').toString();
 
 describe('functional', function() {

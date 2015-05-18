@@ -13,11 +13,11 @@ var sinon = require('sinon');
 require('loadenv')('optimus:env');
 var Transformer = require('fs-transform');
 var monitor = require('monitor-dog');
-var transform = require('../lib/transform');
-var repository = require('../lib/repository');
-var MockResponse = require('./fixtures/mock-response');
-var deployKey = require('../lib/deploy-key');
-var cache = require('../lib/cache');
+var transform = require('../../lib/transform');
+var repository = require('../../lib/repository');
+var MockResponse = require('../fixtures/mock-response');
+var deployKey = require('../../lib/deploy-key');
+var cache = require('../../lib/cache');
 
 describe('transform', function() {
   var validRepo = 'git@github.com:org/repo';

@@ -14,9 +14,9 @@ require('loadenv')('optimus:env');
 var fs = require('fs');
 var childProcess = require('child_process');
 var monitor = require('monitor-dog');
-var Git = require('../lib/git');
-var repository = require('../lib/repository');
-var cache = require('../lib/cache');
+var Git = require('../../lib/git');
+var repository = require('../../lib/repository');
+var cache = require('../../lib/cache');
 
 describe('repository', function() {
   describe('interface', function() {

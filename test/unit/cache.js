@@ -12,7 +12,7 @@ var sinon = require('sinon');
 
 require('loadenv')('optimus:env');
 var childProcess = require('child_process');
-var cache = require('../lib/cache');
+var cache = require('../../lib/cache');
 
 describe('cache', function() {
   beforeEach(function (done) {
