@@ -61,8 +61,5 @@ var instance = new OptimusClient();
  * Static class method to access only the transform action.
  * @see OptimusClient.prototype.transform
  */
-Object.defineProperty(OptimusClient, 'transform', {
-  writable: false,
-  enumerable: true,
-  value: instance.transform.bind(instance)
-})
+OptimusClient.transform = instance.transform.bind(instance);
+
