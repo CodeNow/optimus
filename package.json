@@ -7,10 +7,10 @@
     "start": "node index.js",
     "doc": "jsdoc index.js lib/ -d doc/; open -a 'Google Chrome' doc/index.html",
     "lint": "jshint index.js lib/",
-    "lab": "lab -v -c -m 10000 -a code",
-    "circle-lab": "lab -v -c -m 10000 -a code test/unit/",
-    "test": "npm run lint && npm run lab",
-    "circle-test": "npm run lint && npm run circle-lab"
+    "unit": "lab -v -c -m 10000 -a code test/unit/",
+    "functional": "lab -v -c -m 10000 -a code test/functional/",
+    "test": "npm run lint && npm run unit && npm run functional",
+    "circle-test": "npm run lint && npm run unit"
   },
   "repository": {
     "type": "git",
