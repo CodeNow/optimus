@@ -9,7 +9,8 @@
     "lint": "jshint index.js lib/",
     "unit": "lab -v -c -m 10000 -a code test/unit/",
     "functional": "lab -v -c -m 10000 -a code test/functional/",
-    "test": "npm run lint && npm run unit && npm run functional",
+    "all-tests": "lab -v -c -m 10000 -a code",
+    "test": "npm run lint && npm run all-tests",
     "circle-test": "npm run lint && npm run unit"
   },
   "repository": {

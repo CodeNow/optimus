@@ -320,6 +320,27 @@ describe('repository', function() {
       });
     });
 
+    it('should fetch all if the sha could not be found', function(done) {
+      var repo = 'git@github.com:nirvana/smells-like-teen-spirit';
+      Git.prototype.getSHA.yields(null, null);
+      repository.fetch('keezzz', repo, '1234', function (err) {
+        if (err) { return done(err); }
+        expect(Git.prototype.fetchAll.calledOnce).to.be.true();
+        done();
+      });
+    });
+
+    it('should fetch all if the sha is empty', function(done) {
+      var repo = 'git@github.com:nirvana/smells-like-teen-spirit';
+      Git.prototype.getSHA.yields(null, '');
+      repository.fetch('keezzz', repo, '1234', function (err) {
+        if (err) { return done(err); }
+        expect(Git.prototype.fetchAll.calledOnce).to.be.true();
+        done();
+      });
+    });
+
+
     it('should not fetch all if the commitish matches the sha', function(done) {
       var repo = 'git@github.com:smooth/criminal';
       var commitish = 'abcdef';
