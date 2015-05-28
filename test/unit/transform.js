@@ -153,121 +153,123 @@ describe('transform', function() {
     });
   }); // end 'validations'
 
-  it('should fetch the deploy key', function(done) {
-    response.once('json', function () {
-      expect(deployKey.fetch.calledOnce).to.be.true();
-      expect(deployKey.fetch.calledWith(request.query.deployKey))
-        .to.be.true();
-      done();
+  describe('applyRules', function() {
+    it('should fetch the deploy key', function(done) {
+      response.once('json', function () {
+        expect(deployKey.fetch.calledOnce).to.be.true();
+        expect(deployKey.fetch.calledWith(request.query.deployKey))
+          .to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should time the deploy key fetch', function (done) {
-    response.once('json', function () {
-      expect(monitor.timer.calledWith('key.time')).to.be.true();
-      expect(deployKeyFetchTimer.stop.calledOnce).to.be.true();
-      done();
+    it('should time the deploy key fetch', function (done) {
+      response.once('json', function () {
+        expect(monitor.timer.calledWith('key.time')).to.be.true();
+        expect(deployKeyFetchTimer.stop.calledOnce).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should fetch the repository', function(done) {
-    response.once('json', function () {
-      expect(repository.fetch.calledOnce).to.be.true();
+    it('should fetch the repository', function(done) {
+      response.once('json', function () {
+        expect(repository.fetch.calledOnce).to.be.true();
 
-      expect(repository.fetch.calledWith(
-        sshKeyPath, // Yielded from deployKey.fetch
-        request.query.repo,
-        request.query.commitish
-      )).to.be.true();
-      done();
+        expect(repository.fetch.calledWith(
+          sshKeyPath, // Yielded from deployKey.fetch
+          request.query.repo,
+          request.query.commitish
+        )).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should time the repository fetch', function(done) {
-    response.once('json', function () {
-      expect(monitor.timer.calledWith('repository.time')).to.be.true();
-      expect(fetchTimer.stop.calledOnce).to.be.true();
-      done();
+    it('should time the repository fetch', function(done) {
+      response.once('json', function () {
+        expect(monitor.timer.calledWith('repository.time')).to.be.true();
+        expect(fetchTimer.stop.calledOnce).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should apply given transformations', function (done) {
-    response.once('json', function () {
-      expect(Transformer.dry.calledOnce).to.be.true();
-      expect(Transformer.dry.calledWith(rootPath, request.body)).to.be.true();
-      done();
+    it('should apply given transformations', function (done) {
+      response.once('json', function () {
+        expect(Transformer.dry.calledOnce).to.be.true();
+        expect(Transformer.dry.calledWith(rootPath, request.body)).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should time the application of transformations', function(done) {
-    response.once('json', function () {
-      expect(monitor.timer.calledWith('transform.time')).to.be.true();
-      expect(transformTimer.stop.calledOnce).to.be.true();
-      done();
+    it('should time the application of transformations', function(done) {
+      response.once('json', function () {
+        expect(monitor.timer.calledWith('transform.time')).to.be.true();
+        expect(transformTimer.stop.calledOnce).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should handle transformation errors', function(done) {
-    var error = new Error('howdydoody');
-    Transformer.dry.yieldsAsync(error);
-    response.boom.once('badRequest', function (err) {
-      expect(err).to.equal(error);
-      done();
+    it('should handle transformation errors', function(done) {
+      var error = new Error('howdydoody');
+      Transformer.dry.yieldsAsync(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should unlock the commitish directory', function(done) {
-    response.once('json', function () {
-      expect(cache.unlock.calledWith(rootPath)).to.be.true();
-      done();
+    it('should unlock the commitish directory', function(done) {
+      response.once('json', function () {
+        expect(cache.unlock.calledWith(rootPath)).to.be.true();
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should handle unlock errors', function(done) {
-    var error = new Error('teenagemutantninjaturtles');
-    cache.unlock.yieldsAsync(error);
-    response.boom.once('badRequest', function (err) {
-      expect(err).to.equal(error);
-      done();
+    it('should handle unlock errors', function(done) {
+      var error = new Error('teenagemutantninjaturtles');
+      cache.unlock.yieldsAsync(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should respond with the correct data', function(done) {
-    response.once('json', function (object) {
-      expect(object.warnings).to.deep.equal(transformer.warnings);
-      expect(object.diff).to.equal(transformer.getDiff());
-      expect(object.script).to.equal(transformer.getScript());
-      done();
+    it('should respond with the correct data', function(done) {
+      response.once('json', function (object) {
+        expect(object.warnings).to.deep.equal(transformer.warnings);
+        expect(object.diff).to.equal(transformer.getDiff());
+        expect(object.script).to.equal(transformer.getScript());
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should respond 400 if a fetch error ocurrs', function(done) {
-    var error = new Error('Fetch error');
-    repository.fetch.yields(error);
-    response.boom.once('badRequest', function (err) {
-      expect(err).to.equal(error);
-      done();
+    it('should respond 400 if a fetch error ocurrs', function(done) {
+      var error = new Error('Fetch error');
+      repository.fetch.yields(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
-  });
 
-  it('should respond 400 if a transform error ocurrs', function(done) {
-    var error = new Error('Transform error');
-    Transformer.dry.yields(error);
-    response.boom.once('badRequest', function (err) {
-      expect(err).to.equal(error);
-      done();
+    it('should respond 400 if a transform error ocurrs', function(done) {
+      var error = new Error('Transform error');
+      Transformer.dry.yields(error);
+      response.boom.once('badRequest', function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+      transform.applyRules(request, response);
     });
-    transform.applyRules(request, response);
   });
 });

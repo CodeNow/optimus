@@ -115,7 +115,7 @@ describe('functional', function() {
   describe('PUT /', function() {
     var server;
     before(function (done) {
-      server = app.listen(process.env.PORT, done);
+      server = app.getInstance().listen(process.env.PORT, done);
     });
 
     after(function (done) {

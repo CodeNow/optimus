@@ -28,7 +28,7 @@ function master() {
  * Worker process.
  */
 function worker() {
-  var server = app.listen(process.env.PORT, function (err) {
+  var server = app.getInstance().listen(process.env.PORT, function (err) {
     if (err) {
       error('Application start error: ' + err.stack);
       return process.exit(1);
