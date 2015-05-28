@@ -22,7 +22,7 @@ describe('functional', function() {
   before(function (done) {
     fixtureCache.create(function (err) {
       if (err) { return done(err); }
-      server = app.listen(process.env.PORT, done);
+      server = app.getInstance().listen(process.env.PORT, done);
     });
   });
 

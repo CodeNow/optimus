@@ -82,6 +82,7 @@ describe('repository', function() {
       sinon.spy(Git.prototype, '_setup');
       sinon.stub(cache, 'lock').yieldsAsync();
       sinon.stub(cache, 'touch').yieldsAsync();
+      sinon.stub(cache, 'unlock').yieldsAsync();
       done();
     });
 
@@ -95,6 +96,7 @@ describe('repository', function() {
       Git.prototype._setup.restore();
       cache.lock.restore();
       cache.touch.restore();
+      cache.unlock.restore();
       done();
     });
 
@@ -115,7 +117,7 @@ describe('repository', function() {
       var path = repository.getCommitishPath(repo, commitish);
       repository.fetch('a/key', repo, commitish, function (err) {
         if (err) { return done(err); }
-        expect(fs.existsSync.calledWith(path + '/.git')).to.be.true();
+        expect(fs.existsSync.calledWith(path)).to.be.true();
         done();
       });
     });
@@ -200,11 +202,17 @@ describe('repository', function() {
     });
 
     it('should touch the repository cache directory if it already exists', function(done) {
-      fs.existsSync.onFirstCall().returns(true);
       var repo = 'git@github.com:daredevil/hitlist';
       var repoPath = repository.getRepoPath(repo)
       var command = 'mkdir -p ' + repoPath;
-      repository.fetch('blind/justice', repo, 'karate', function (err) {
+      var key = 'blind/justice';
+
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+
+      repository.fetch(key, repo, 'karate', function (err) {
         if (err) { return done(err); }
         expect(childProcess.exec.calledWith(command)).to.be.false();
         expect(cache.touch.calledWith(repoPath)).to.be.true();
@@ -224,12 +232,16 @@ describe('repository', function() {
     });
 
     it('should not clone the repository if it already exists', function(done) {
-      fs.existsSync.onFirstCall().returns(true);
       var repo = 'git@github.com:toad/hut';
-      var repositoryPath = repository.getRepoPath(repo);
-      repository.fetch('mushroom/hat', repo, 'tinyjumps', function(err) {
+      var key = 'mushroom/hat';
+      var repoPath = repository.getRepoPath(repo);
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+      repository.fetch(key, repo, 'tinyjumps', function(err) {
         if (err) { return done(err); }
-        expect(Git.prototype.clone.calledWith(repo, repositoryPath))
+        expect(Git.prototype.clone.calledWith(repo, repoPath))
           .to.be.false();
         done();
       });
@@ -249,7 +261,7 @@ describe('repository', function() {
     });
 
     it('should touch the commitish directory if it already exists', function(done) {
-      fs.existsSync.onSecondCall().returns(true);
+      fs.existsSync.returns(true);
       var repo = 'git@github.com:nin/downwardspiral';
       var commitish = 'closer';
       var repoPath = repository.getRepoPath(repo);
@@ -310,6 +322,27 @@ describe('repository', function() {
       });
     });
 
+    it('should fetch all if the sha could not be found', function(done) {
+      var repo = 'git@github.com:nirvana/smells-like-teen-spirit';
+      Git.prototype.getSHA.yields(null, null);
+      repository.fetch('keezzz', repo, '1234', function (err) {
+        if (err) { return done(err); }
+        expect(Git.prototype.fetchAll.calledOnce).to.be.true();
+        done();
+      });
+    });
+
+    it('should fetch all if the sha is empty', function(done) {
+      var repo = 'git@github.com:nirvana/smells-like-teen-spirit';
+      Git.prototype.getSHA.yields(null, '');
+      repository.fetch('keezzz', repo, '1234', function (err) {
+        if (err) { return done(err); }
+        expect(Git.prototype.fetchAll.calledOnce).to.be.true();
+        done();
+      });
+    });
+
+
     it('should not fetch all if the commitish matches the sha', function(done) {
       var repo = 'git@github.com:smooth/criminal';
       var commitish = 'abcdef';
@@ -339,6 +372,54 @@ describe('repository', function() {
       repository.fetch('tenniselbow', repo, commitish, function (err) {
         if (err) { return done(err); }
         expect(Git.prototype.checkout.calledWith(commitish)).to.be.false();
+        done();
+      });
+    });
+
+    it('should remove the .git directory from the commitish cache', function(done) {
+      var repo = 'git@github.com:sanfrancisco/construction';
+      var commitish = '7amjackhammers';
+      var path = repository.getCommitishPath(repo, commitish);
+      var expectedCommand = 'rm -rf ' + path + '/.git';
+      repository.fetch('sosleepy', repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(childProcess.exec.calledWith(expectedCommand)).to.be.true();
+        done();
+      });
+    });
+
+    it('should lock the repo directory before copying to commitish', function(done) {
+      var repo = 'git@github.com:holy/rollercoasters';
+      var commitish = 'batman';
+      var repoPath = repository.getRepoPath(repo);
+      var key = 'joker';
+
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+
+      repository.fetch(key, repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.lock.calledWith(repoPath)).to.be.true();
+        done();
+      });
+    });
+
+    it('should unlock the repo directory after copying to commitish', function(done) {
+      var repo = 'git@github.com:holy/crazypeople';
+      var commitish = 'robin';
+      var repoPath = repository.getRepoPath(repo);
+      var key = 'twoface';
+
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+
+      repository.fetch(key, repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.unlock.calledWith(repoPath)).to.be.true();
         done();
       });
     });
