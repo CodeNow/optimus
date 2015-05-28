@@ -11,7 +11,8 @@
     "functional": "lab -v -c -m 10000 -a code test/functional/",
     "all-tests": "lab -v -c -m 10000 -a code",
     "test": "npm run lint && npm run all-tests",
-    "circle-test": "npm run lint && npm run unit"
+    "fix-circle-ssh": "sed -i.bak 's/IdentitiesOnly yes/IdentitiesOnly no/g' ../.ssh/config",
+    "circle-test": "npm run fix-circle-ssh && npm run lint && npm run all-tests"
   },
   "repository": {
     "type": "git",
