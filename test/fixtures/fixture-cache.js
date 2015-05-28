@@ -11,7 +11,8 @@ var applicationRoot = require('app-root-path').toString();
  */
 module.exports = {
   create: create,
-  destroy: destroy
+  destroy: destroy,
+  reset: reset
 };
 
 /**
@@ -54,6 +55,17 @@ function create(done) {
     ].join('/');
   });
   require('../../lib/cache').initialize(done);
+}
+
+/**
+ * Empties and resets the testing caches.
+ * @param {function} done Called when the caches have been reset.
+ */
+function reset(done) {
+  destroy(function (err) {
+    if (err) { return done(err); }
+    create(done);
+  });
 }
 
 /**

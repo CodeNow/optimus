@@ -60,6 +60,7 @@ describe('transform', function() {
     sinon.spy(transformTimer, 'stop');
     sinon.spy(deployKeyFetchTimer, 'stop');
     sinon.stub(cache, 'unlock').yieldsAsync();
+    sinon.spy(console, 'error');
     done();
   });
 
@@ -73,6 +74,7 @@ describe('transform', function() {
     transformTimer.stop.restore();
     deployKeyFetchTimer.stop.restore();
     cache.unlock.restore();
+    console.error.restore();
     done();
   });
 
@@ -232,7 +234,7 @@ describe('transform', function() {
       transform.applyRules(request, response);
     });
 
-    it('should handle unlock errors', function(done) {
+    it('should yield unlock errors', function(done) {
       var error = new Error('teenagemutantninjaturtles');
       cache.unlock.yieldsAsync(error);
       response.boom.once('badRequest', function (err) {

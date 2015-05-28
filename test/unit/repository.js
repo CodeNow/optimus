@@ -82,6 +82,7 @@ describe('repository', function() {
       sinon.spy(Git.prototype, '_setup');
       sinon.stub(cache, 'lock').yieldsAsync();
       sinon.stub(cache, 'touch').yieldsAsync();
+      sinon.stub(cache, 'unlock').yieldsAsync();
       done();
     });
 
@@ -95,6 +96,7 @@ describe('repository', function() {
       Git.prototype._setup.restore();
       cache.lock.restore();
       cache.touch.restore();
+      cache.unlock.restore();
       done();
     });
 
@@ -382,6 +384,42 @@ describe('repository', function() {
       repository.fetch('sosleepy', repo, commitish, function (err) {
         if (err) { return done(err); }
         expect(childProcess.exec.calledWith(expectedCommand)).to.be.true();
+        done();
+      });
+    });
+
+    it('should lock the repo directory before copying to commitish', function(done) {
+      var repo = 'git@github.com:holy/rollercoasters';
+      var commitish = 'batman';
+      var repoPath = repository.getRepoPath(repo);
+      var key = 'joker';
+
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+
+      repository.fetch(key, repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.lock.calledWith(repoPath)).to.be.true();
+        done();
+      });
+    });
+
+    it('should unlock the repo directory after copying to commitish', function(done) {
+      var repo = 'git@github.com:holy/crazypeople';
+      var commitish = 'robin';
+      var repoPath = repository.getRepoPath(repo);
+      var key = 'twoface';
+
+      fs.existsSync.restore();
+      sinon.stub(fs, 'existsSync', function (path) {
+        return path === repoPath + '/.git' || path === key;
+      });
+
+      repository.fetch(key, repo, commitish, function (err) {
+        if (err) { return done(err); }
+        expect(cache.unlock.calledWith(repoPath)).to.be.true();
         done();
       });
     });

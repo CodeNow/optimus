@@ -77,7 +77,7 @@ describe('functional', function() {
       });
     });
 
-    it('should checkout a commitish of the same repo', function(done) {
+    it('should checkout a different commitish of the same repo', function(done) {
       var repo = 'git@github.com:CodeNow/optimus-private-test';
       var commitish = '8dc308afc20330948e74d0b85c116572326ecee5';
       repository.fetch(keyPath, repo, commitish, function (err, path) {
@@ -115,7 +115,10 @@ describe('functional', function() {
   describe('PUT /', function() {
     var server;
     before(function (done) {
-      server = app.getInstance().listen(process.env.PORT, done);
+      fixtureCache.reset(function (err) {
+        if (err) { return done(err); }
+        server = app.getInstance().listen(process.env.PORT, done);
+      });
     });
 
     after(function (done) {
