@@ -11,8 +11,8 @@ var expect = Code.expect;
 var sinon = require('sinon');
 
 require('loadenv')('optimus:env');
-var Git = require('../lib/git');
-var deployKey = require('../lib/deploy-key');
+var Git = require('../../lib/git');
+var deployKey = require('../../lib/deploy-key');
 
 describe('Git', function() {
   var key = '/some/deploy/key';
@@ -22,11 +22,13 @@ describe('Git', function() {
   beforeEach(function (done) {
     git = new Git(key, path);
     sinon.stub(deployKey, 'exec').yieldsAsync();
+    sinon.spy(Git.log, 'trace');
     done();
   });
 
   afterEach(function (done) {
     deployKey.exec.restore();
+    Git.log.trace.restore();
     done();
   });
 
@@ -79,6 +81,16 @@ describe('Git', function() {
         done();
       });
     });
+
+    it('should log the clone at `trace`', function(done) {
+      var repo = 'git@github.com:Michigan/Eucher';
+      var path = '/gonna/cheat';
+      git.clone(repo, path, function () {
+        expect(Git.log.trace.calledWith('Git: cloning ' + repo + ' to ' + path))
+          .to.be.true();
+        done();
+      });
+    });
   });
 
   describe('getSHA', function() {
@@ -88,6 +100,13 @@ describe('Git', function() {
         var options = { cwd: path }
         expect(deployKey.exec.calledOnce).to.be.true();
         expect(deployKey.exec.calledWith(key, command, options)).to.be.true();
+        done();
+      });
+    });
+
+    it('should log rev-parse at `trace`', function(done) {
+      git.getSHA(function() {
+        expect(Git.log.trace.calledWith('Git: SHA from head')).to.be.true();
         done();
       });
     });
@@ -103,6 +122,13 @@ describe('Git', function() {
         done();
       });
     });
+
+    it('should log the fetch at `trace`', function(done) {
+      git.fetchAll(function () {
+        expect(Git.log.trace.calledWith('Git: fetch all')).to.be.true();
+        done();
+      });
+    });
   });
 
   describe('checkout', function() {
@@ -113,6 +139,15 @@ describe('Git', function() {
         var options = { cwd: path }
         expect(deployKey.exec.calledOnce).to.be.true();
         expect(deployKey.exec.calledWith(key, command, options)).to.be.true();
+        done();
+      });
+    });
+
+    it('should log the checkout at `trace`', function(done) {
+      var commitish = 'superduperss';
+      git.checkout(commitish, function () {
+        expect(Git.log.trace.calledWith('Git: checkout ' + commitish))
+          .to.be.true();
         done();
       });
     });

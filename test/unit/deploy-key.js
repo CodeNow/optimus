@@ -30,6 +30,10 @@ describe('deploy-key', function() {
     sinon.stub(childProcess, 'exec').yieldsAsync();
     sinon.stub(fs, 'existsSync').returns(false);
     sinon.stub(cache, 'touch').yieldsAsync();
+    sinon.spy(deployKey.log, 'info');
+    sinon.spy(deployKey.log, 'debug');
+    sinon.spy(deployKey.log, 'error');
+    sinon.spy(deployKey.log, 'fatal');
     done();
   });
 
@@ -40,6 +44,10 @@ describe('deploy-key', function() {
     childProcess.exec.restore();
     fs.existsSync.restore();
     cache.touch.restore();
+    deployKey.log.info.restore();
+    deployKey.log.debug.restore();
+    deployKey.log.error.restore();
+    deployKey.log.fatal.restore();
     done();
   });
 
@@ -169,6 +177,67 @@ describe('deploy-key', function() {
         done();
       });
     });
+
+    it('should log a fetch at `info`', function(done) {
+      var keyPath = '/plz/log/me/kthxbye';
+      deployKey.fetch(keyPath, function (err) {
+        if (err) { return done(err); }
+        expect(deployKey.log.info.calledWith(
+          'Fetching key from S3: ' + keyPath
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log deploy key cache hits at `debug`', function(done) {
+      var keyPath = '/wowza/plowza';
+      var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
+      fs.existsSync.returns(true);
+      deployKey.fetch(keyPath, function (err) {
+        if (err) { return done(err); }
+        expect(deployKey.log.debug.calledWith(
+          'SSH Key Cache Hit: ' + sshKeyPath
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log errors when creating cache path at `error`', function(done) {
+      var error = new Error('mkdir errooorz');
+      childProcess.exec.yieldsAsync(error);
+      var keyPath = 'some/patthhz';
+      var cachePath = deployKey.getCachePath(keyPath);
+      deployKey.fetch(keyPath, function (err) {
+        expect(deployKey.log.error.calledWith(
+          error, 'Could not create deploy key cache entry: ' + cachePath
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log errors when fetching from S3 at `error`', function(done) {
+      var error = new Error('S3 bad, bad nasty bad');
+      s3.getObject.yieldsAsync(error);
+      deployKey.fetch('/paths/yall', function (err) {
+        expect(deployKey.log.error.calledWith(
+          error, 'Could not fetch object from S3'
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log errors when setting permissions on keys at `error`', function(done) {
+      var error = new Error('chschmood errorz');
+      childProcess.exec.onSecondCall().yieldsAsync(error);
+      var keyPath = 'some/key';
+      var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
+      deployKey.fetch(keyPath, function (err) {
+        expect(deployKey.log.error.calledWith(
+          error, 'Could not change permissions on key: ' + sshKeyPath
+        )).to.be.true();
+        done();
+      });
+    });
   }); // end 'fetch'
 
   describe('exec', function() {
@@ -205,6 +274,22 @@ describe('deploy-key', function() {
         'who \\| finger\'';
       deployKey.exec(key, command, options, function() {
         expect(childProcess.exec.calledWith(expected, options)).to.be.true();
+        done();
+      });
+    });
+
+    it('should log errors when executing commands at `error`', function(done) {
+      var error = new Error('ssh crunch wrapped command error (by taco bell)');
+      childProcess.exec.yieldsAsync(error);
+      var command = 'who | finger';
+      var keyPath = 'run/for/the/border';
+      var sshCommand = 'ssh-agent sh -c \'' +
+        'ssh-add ' + keyPath + ' && ' +
+        command +  '\'';
+      deployKey.exec(keyPath, 'who | finger', function () {
+        expect(deployKey.log.error.calledWith()).to.be.true(
+          error, 'Unable to execute command: ' + sshCommand
+        );
         done();
       });
     });

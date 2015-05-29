@@ -17,11 +17,19 @@ var cache = require('../../lib/cache');
 describe('cache', function() {
   beforeEach(function (done) {
     sinon.stub(childProcess, 'exec').yieldsAsync();
+    sinon.spy(cache.log, 'info');
+    sinon.spy(cache.log, 'debug');
+    sinon.spy(cache.log, 'error');
+    sinon.spy(cache.log, 'fatal');
     done();
   });
 
   afterEach(function (done) {
     childProcess.exec.restore();
+    cache.log.info.restore();
+    cache.log.debug.restore();
+    cache.log.error.restore();
+    cache.log.fatal.restore();
     done();
   });
 
@@ -46,18 +54,8 @@ describe('cache', function() {
       done();
     });
 
-    it('should expose the `usage` method', function(done) {
-      expect(cache.usage).to.be.a.function();
-      done();
-    });
-
     it('should expose the `purge` method', function(done) {
       expect(cache.purge).to.be.a.function();
-      done();
-    });
-
-    it('should expose the `purgeAll` method', function(done) {
-      expect(cache.purgeAll).to.be.a.function();
       done();
     });
 
@@ -85,6 +83,42 @@ describe('cache', function() {
         done();
       });
     });
+
+    it('should log cache initialization at `info`', function(done) {
+      cache.initialize(function (err) {
+        if (err) { return done(err); }
+        expect(cache.log.info.calledWith('Initializing file system caches'))
+          .to.be.true();
+        done();
+      });
+    });
+
+    it('should log failed cache initialization at `fatal`', function(done) {
+      var error = new Error('Cache init failure');
+      childProcess.exec.yieldsAsync(error);
+      cache.initialize(function (err) {
+        var msg = 'Unable to initialize cache: ' + process.env.DEPLOY_KEY_CACHE;
+        expect(cache.log.fatal.calledWith(err, msg)).to.be.true();
+        done();
+      });
+    });
+
+    it('should log each cache creatiion at `debug`', function(done) {
+      cache.initialize(function (err) {
+        if (err) { return done(err); }
+        expect(cache.log.debug.callCount).to.equal(3);
+        expect(cache.log.debug.calledWith(
+          'Cache initialized: ' + process.env.DEPLOY_KEY_CACHE
+        )).to.be.true();
+        expect(cache.log.debug.calledWith(
+          'Cache initialized: ' + process.env.REPOSITORY_CACHE
+        )).to.be.true();
+        expect(cache.log.debug.calledWith(
+          'Cache initialized: ' + process.env.COMMITISH_CACHE
+        )).to.be.true();
+        done();
+      });
+    });
   }); // end 'initialize'
 
   describe('touch', function() {
@@ -95,6 +129,17 @@ describe('cache', function() {
         done();
       });
     });
+
+    it('should log errors at `error`', function(done) {
+      var error = new Error('Touch error');
+      var path = '/bar/baz';
+      childProcess.exec.yieldsAsync(error);
+      cache.touch(path, function (err) {
+        expect(cache.log.error.calledWith(error, 'Touch failed: ' + path))
+          .to.be.true();
+        done();
+      });
+    });
   }); // end 'touch'
 
   describe('lock', function() {
@@ -102,6 +147,17 @@ describe('cache', function() {
       cache.lock('/tmp/wow', function (err) {
         if (err) { return done(err); }
         expect(childProcess.exec.calledWith('mkdir -p /tmp/wow/.optimus_lock'))
+          .to.be.true();
+        done();
+      });
+    });
+
+    it('should log errors at `error`', function(done) {
+      var error = new Error('Lock error');
+      var path = '/path/to/lock';
+      childProcess.exec.yieldsAsync(error);
+      cache.lock(path, function (err) {
+        expect(cache.log.error.calledWith(error, 'Cache lock failed: ' + path))
           .to.be.true();
         done();
       });
@@ -117,33 +173,18 @@ describe('cache', function() {
         done();
       });
     });
-  }); // end 'unlock'
 
-  describe('usage', function() {
-    it('should collect and tally cache disk usage', function(done) {
-      var deployKeyUsage = '100\t' + process.env.DEPLOY_KEY_CACHE;
-      var repoUsage = '200\t' + process.env.REPOSITORY_CACHE;
-      var commitishUsage = '300\t' + process.env.COMMITISH_CACHE;
-      childProcess.exec
-        .onFirstCall().yieldsAsync(null, deployKeyUsage)
-        .onSecondCall().yieldsAsync(null, repoUsage)
-        .onThirdCall().yieldsAsync(null, commitishUsage);
-      cache.usage(function (err, bytes) {
-        if (err) { return done(err); }
-        expect(bytes).to.equal(600);
-        done();
-      });
-    });
-
-    it('should gracefully handle errors', function(done) {
-      var error = new Error('Something wicked');
+    it('should log errors at `error`', function(done) {
+      var error = new Error('Unlock error');
+      var path = '/path/to/unlock';
       childProcess.exec.yieldsAsync(error);
-      cache.usage(function (err) {
-        expect(err).to.equal(error);
+      cache.unlock(path, function (err) {
+        expect(cache.log.error.calledWith(error, 'Cache unlock failed: ' + path))
+          .to.be.true();
         done();
       });
     });
-  }); // end 'usage'
+  }); // end 'unlock'
 
   describe('purge', function() {
     it('should purge cache directories', function(done) {
@@ -164,41 +205,31 @@ describe('cache', function() {
     });
 
     it('should handle file system errors', function(done) {
-      var error = new Error('Party on Wayne.')
+      var error = new Error('Party on Wayne.');
       childProcess.exec.yieldsAsync(error);
       cache.purge(function (err) {
         expect(err).to.equal(error);
         done();
       });
     });
-  }); // end 'purge'
 
-  describe('purgeAll', function() {
-    it('should purge cache directories', function(done) {
-      var command = 'find $PATH -mindepth 1 -maxdepth 1 ' +
-        '\\( -type d \'!\' -exec test -e "{}/.optimus.lock" \';\' \\) ' +
-        '-print | xargs rm -rf';
-      cache.purgeAll(function (err) {
+    it('should log purging at `info`', function(done) {
+      cache.purge(function (err) {
         if (err) { return done(err); }
-        var cmd1 = command.replace('$PATH', process.env.DEPLOY_KEY_CACHE);
-        expect(childProcess.exec.calledWith(cmd1)).to.be.true();
-        var cmd2 = command.replace('$PATH', process.env.REPOSITORY_CACHE);
-        expect(childProcess.exec.calledWith(cmd2)).to.be.true();
-        var cmd3 = command.replace('$PATH', process.env.COMMITISH_CACHE);
-        expect(childProcess.exec.calledWith(cmd3)).to.be.true();
+        expect(cache.log.info.calledWith('Purging caches')).to.be.true();
         done();
       });
     });
 
-    it('should handle file system errors', function(done) {
-      var error = new Error('Party on Garth.')
+    it('should log purge errors at `error`', function(done) {
+      var error = new Error('Party on Garth.');
       childProcess.exec.yieldsAsync(error);
-      cache.purgeAll(function (err) {
-        expect(err).to.equal(error);
+      cache.purge(function (err) {
+        expect(cache.log.error.calledWith(error, 'Purge failed')).to.be.true();
         done();
       });
     });
-  }); // end 'purgeAll'
+  }); // end 'purge'
 
   describe('setPurgeInterval', function() {
     var clock;
