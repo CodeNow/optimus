@@ -286,7 +286,7 @@ describe('deploy-key', function() {
       var sshCommand = 'ssh-agent sh -c \'' +
         'ssh-add ' + keyPath + ' && ' +
         command +  '\'';
-      deployKey.exec(keyPath, 'who | finger', function () {
+      deployKey.exec(keyPath, command, function () {
         expect(deployKey.log.error.calledWith()).to.be.true(
           error, 'Unable to execute command: ' + sshCommand
         );
