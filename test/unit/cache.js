@@ -54,6 +54,11 @@ describe('cache', function() {
       done();
     });
 
+    it('should expose the `usage` method', function(done) {
+      expect(cache.usage).to.be.a.function();
+      done();
+    });
+
     it('should expose the `purge` method', function(done) {
       expect(cache.purge).to.be.a.function();
       done();
@@ -185,6 +190,32 @@ describe('cache', function() {
       });
     });
   }); // end 'unlock'
+
+  describe('usage', function() {
+    it('should collect and tally cache disk usage', function(done) {
+      var deployKeyUsage = '100\t' + process.env.DEPLOY_KEY_CACHE;
+      var repoUsage = '200\t' + process.env.REPOSITORY_CACHE;
+      var commitishUsage = '300\t' + process.env.COMMITISH_CACHE;
+      childProcess.exec
+        .onFirstCall().yieldsAsync(null, deployKeyUsage)
+        .onSecondCall().yieldsAsync(null, repoUsage)
+        .onThirdCall().yieldsAsync(null, commitishUsage);
+      cache.usage(function (err, bytes) {
+        if (err) { return done(err); }
+        expect(bytes).to.equal(600);
+        done();
+      });
+    });
+
+    it('should gracefully handle errors', function(done) {
+      var error = new Error('Something wicked');
+      childProcess.exec.yieldsAsync(error);
+      cache.usage(function (err) {
+        expect(err).to.equal(error);
+        done();
+      });
+    });
+  }); // end 'usage'
 
   describe('purge', function() {
     it('should purge cache directories', function(done) {
