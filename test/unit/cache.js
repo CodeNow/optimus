@@ -215,6 +215,33 @@ describe('cache', function() {
         done();
       });
     });
+
+    it('should log the usage call at `info`', function(done) {
+      var deployKeyUsage = '100\t' + process.env.DEPLOY_KEY_CACHE;
+      var repoUsage = '200\t' + process.env.REPOSITORY_CACHE;
+      var commitishUsage = '300\t' + process.env.COMMITISH_CACHE;
+      childProcess.exec
+        .onFirstCall().yieldsAsync(null, deployKeyUsage)
+        .onSecondCall().yieldsAsync(null, repoUsage)
+        .onThirdCall().yieldsAsync(null, commitishUsage);
+      cache.usage(function (err) {
+        expect(cache.log.info.calledWith(
+          'Calculating cache disk usage'
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log disk usage query errors at `error`', function(done) {
+      var error = new Error('This way comes');
+      childProcess.exec.yieldsAsync(error);
+      cache.usage(function (err) {
+        expect(cache.log.error.calledWith(
+          error, 'Unable to collect disk usage information'
+        )).to.be.true();
+        done();
+      });
+    });
   }); // end 'usage'
 
   describe('purge', function() {
