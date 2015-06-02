@@ -78,7 +78,7 @@ describe('functional', function() {
       };
       client.transform(options, function (err, resp) {
         if (err) { return done(err); }
-        expect(resp.statusCode).to.equal(400);
+        expect(resp.statusCode).to.equal(404);
         done();
       });
     });

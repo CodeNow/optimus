@@ -13,6 +13,7 @@ var sinon = require('sinon');
 require('loadenv')('optimus:env');
 var childProcess = require('child_process');
 var cache = require('../../lib/cache');
+var errorCat = require('../../lib/error');
 
 describe('cache', function() {
   beforeEach(function (done) {
@@ -21,6 +22,7 @@ describe('cache', function() {
     sinon.spy(cache.log, 'debug');
     sinon.spy(cache.log, 'error');
     sinon.spy(cache.log, 'fatal');
+    sinon.spy(errorCat, 'wrap');
     done();
   });
 
@@ -30,6 +32,7 @@ describe('cache', function() {
     cache.log.debug.restore();
     cache.log.error.restore();
     cache.log.fatal.restore();
+    errorCat.wrap.restore();
     done();
   });
 
@@ -135,12 +138,13 @@ describe('cache', function() {
       });
     });
 
-    it('should log errors at `error`', function(done) {
+    it('should yield a Boom 500 error on failure', function(done) {
       var error = new Error('Touch error');
       var path = '/bar/baz';
       childProcess.exec.yieldsAsync(error);
       cache.touch(path, function (err) {
-        expect(cache.log.error.calledWith(error, 'Touch failed: ' + path))
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.wrap.calledWith(error, 500, 'cache.touch'))
           .to.be.true();
         done();
       });
@@ -157,13 +161,13 @@ describe('cache', function() {
       });
     });
 
-    it('should log errors at `error`', function(done) {
+    it('should yield a Boom 500 error on failure', function(done) {
       var error = new Error('Lock error');
       var path = '/path/to/lock';
       childProcess.exec.yieldsAsync(error);
       cache.lock(path, function (err) {
-        expect(cache.log.error.calledWith(error, 'Cache lock failed: ' + path))
-          .to.be.true();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.wrap.calledWith(error, 500, 'cache.lock')).to.be.true();
         done();
       });
     });
@@ -179,12 +183,13 @@ describe('cache', function() {
       });
     });
 
-    it('should log errors at `error`', function(done) {
+    it('should yield a Boom 500 error on failure', function(done) {
       var error = new Error('Unlock error');
       var path = '/path/to/unlock';
       childProcess.exec.yieldsAsync(error);
       cache.unlock(path, function (err) {
-        expect(cache.log.error.calledWith(error, 'Cache unlock failed: ' + path))
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.wrap.calledWith(error, 500, 'cache.unlock'))
           .to.be.true();
         done();
       });

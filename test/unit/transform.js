@@ -18,6 +18,7 @@ var repository = require('../../lib/repository');
 var MockResponse = require('../fixtures/mock-response');
 var deployKey = require('../../lib/deploy-key');
 var cache = require('../../lib/cache');
+var errorCat = require('../../lib/error');
 
 describe('transform', function() {
   var validRepo = 'git@github.com:org/repo';
@@ -51,7 +52,6 @@ describe('transform', function() {
     sinon.stub(deployKey, 'fetch').yieldsAsync(null, sshKeyPath);
     sinon.stub(repository, 'fetch').yieldsAsync(null, rootPath);
     sinon.stub(Transformer, 'dry').yieldsAsync(null, transformer);
-    sinon.spy(response.boom, 'badRequest');
     sinon.stub(monitor, 'timer')
       .onFirstCall().returns(deployKeyFetchTimer)
       .onSecondCall().returns(fetchTimer)
@@ -60,7 +60,7 @@ describe('transform', function() {
     sinon.spy(transformTimer, 'stop');
     sinon.spy(deployKeyFetchTimer, 'stop');
     sinon.stub(cache, 'unlock').yieldsAsync();
-    sinon.spy(console, 'error');
+    sinon.spy(errorCat, 'create');
     done();
   });
 
@@ -68,13 +68,12 @@ describe('transform', function() {
     deployKey.fetch.restore();
     repository.fetch.restore();
     Transformer.dry.restore();
-    response.boom.badRequest.restore();
     monitor.timer.restore();
     fetchTimer.stop.restore();
     transformTimer.stop.restore();
     deployKeyFetchTimer.stop.restore();
     cache.unlock.restore();
-    console.error.restore();
+    errorCat.create.restore();
     done();
   });
 
@@ -87,71 +86,92 @@ describe('transform', function() {
 
   describe('validations', function() {
     it('should respond 400 if repository is missing', function(done) {
-      transform.applyRules({
+      var req = {
         query: { commitish: 'commitish', deployKey: '/some/path' },
         body: []
-      }, response);
-      expect(response.boom.badRequest.calledOnce).to.be.true();
-      expect(response.boom.badRequest.calledWith(
-        'Parameter `repo` is required.'
-      )).to.be.true();
-      done();
+      };
+      transform.applyRules(req, response, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledOnce).to.be.true();
+        expect(errorCat.create.calledWith(
+          400, 'Parameter `repo` is required.'
+        )).to.be.true();
+        done();
+      });
     });
 
     it('should respond 400 if the repository is malformed', function(done) {
-      transform.applyRules({
+      var req = {
         query: {
           commitish: 'commitish',
           deployKey: '/some/path',
           repo: 'pzzzklskd,d,---s'
         },
         body: []
-      }, response);
-      expect(response.boom.badRequest.calledOnce).to.be.true();
-      expect(response.boom.badRequest.calledWith(
-        'Parameter `repo` is not in the form: ' +
-        'git@github.com:Organization/Repository'
-      )).to.be.true();
-      done();
+      };
+      transform.applyRules(req, response, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledOnce).to.be.true();
+        expect(errorCat.create.calledWith(
+          400,
+          'Parameter `repo` is not in the form: ' +
+          'git@github.com:Organization/Repository'
+        )).to.be.true();
+        done();
+      });
     });
 
     it('should respond 400 if commitish is missing', function(done) {
-      transform.applyRules({
+      var req = {
         query: { repo: validRepo, deployKey: '/some/path' },
         body: []
-      }, response);
-      expect(response.boom.badRequest.calledOnce).to.be.true();
-      expect(response.boom.badRequest.calledWith(
-        'Parameter `commitish` is required.'
-      )).to.be.true();
-      done();
+      };
+      transform.applyRules(req, response, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledOnce).to.be.true();
+        expect(errorCat.create.calledWith(
+          400, 'Parameter `commitish` is required.'
+        )).to.be.true();
+        done();
+      });
     });
 
     it('should respond 400 if the deploy key is missing', function(done) {
-      transform.applyRules({
+      var req = {
         query: { repo: validRepo, commitish: 'commitish' },
         body: []
-      }, response);
-      expect(response.boom.badRequest.calledOnce).to.be.true();
-      expect(response.boom.badRequest.calledWith(
-        'Parameter `deployKey` is required.'
-      )).to.be.true();
-      done();
+      };
+      transform.applyRules(req, response, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledOnce).to.be.true();
+        expect(errorCat.create.calledWith(
+          400, 'Parameter `deployKey` is required.'
+        )).to.be.true();
+        done();
+      });
     });
 
     it('should respond 400 if the body is not an array of rules', function(done) {
-      transform.applyRules({
+      var req = {
         query: {
           repo: validRepo,
           commitish: 'commitish',
           deployKey: '/some/path'
         }
-      }, response);
-      expect(response.boom.badRequest.calledOnce).to.be.true();
-      expect(response.boom.badRequest.calledWith(
-        'Body must be an array of transform rules.'
-      )).to.be.true();
-      done();
+      };
+      transform.applyRules(req, response, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledOnce).to.be.true();
+        expect(errorCat.create.calledWith(
+          400, 'Body must be an array of transform rules.'
+        )).to.be.true();
+        done();
+      });
     });
   }); // end 'validations'
 
@@ -216,14 +236,13 @@ describe('transform', function() {
       transform.applyRules(request, response);
     });
 
-    it('should handle transformation errors', function(done) {
+    it('should yield transformation errors', function(done) {
       var error = new Error('howdydoody');
       Transformer.dry.yieldsAsync(error);
-      response.boom.once('badRequest', function (err) {
+      transform.applyRules(request, response, function (err) {
         expect(err).to.equal(error);
         done();
       });
-      transform.applyRules(request, response);
     });
 
     it('should unlock the commitish directory', function(done) {
@@ -237,11 +256,10 @@ describe('transform', function() {
     it('should yield unlock errors', function(done) {
       var error = new Error('teenagemutantninjaturtles');
       cache.unlock.yieldsAsync(error);
-      response.boom.once('badRequest', function (err) {
+      transform.applyRules(request, response, function (err) {
         expect(err).to.equal(error);
         done();
       });
-      transform.applyRules(request, response);
     });
 
     it('should respond with the correct data', function(done) {
@@ -254,24 +272,22 @@ describe('transform', function() {
       transform.applyRules(request, response);
     });
 
-    it('should respond 400 if a fetch error ocurrs', function(done) {
+    it('should yield repository fetch errors', function(done) {
       var error = new Error('Fetch error');
       repository.fetch.yields(error);
-      response.boom.once('badRequest', function (err) {
+      transform.applyRules(request, response, function (err) {
         expect(err).to.equal(error);
         done();
       });
-      transform.applyRules(request, response);
     });
 
-    it('should respond 400 if a transform error ocurrs', function(done) {
+    it('should yield transformation errors', function(done) {
       var error = new Error('Transform error');
       Transformer.dry.yields(error);
-      response.boom.once('badRequest', function (err) {
+      transform.applyRules(request, response, function (err) {
         expect(err).to.equal(error);
         done();
       });
-      transform.applyRules(request, response);
     });
   });
 });

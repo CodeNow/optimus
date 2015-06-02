@@ -17,6 +17,7 @@ var deployKey = require('../../lib/deploy-key');
 var noop = require('101/noop');
 var childProcess = require('child_process');
 var cache = require('../../lib/cache');
+var errorCat = require('../../lib/error');
 
 describe('deploy-key', function() {
   var s3 = {
@@ -34,6 +35,7 @@ describe('deploy-key', function() {
     sinon.spy(deployKey.log, 'debug');
     sinon.spy(deployKey.log, 'error');
     sinon.spy(deployKey.log, 'fatal');
+    sinon.spy(errorCat, 'wrap');
     done();
   });
 
@@ -48,6 +50,7 @@ describe('deploy-key', function() {
     deployKey.log.debug.restore();
     deployKey.log.error.restore();
     deployKey.log.fatal.restore();
+    errorCat.wrap.restore();
     done();
   });
 
@@ -169,26 +172,6 @@ describe('deploy-key', function() {
       });
     });
 
-    it('should pass errors to the callback', function(done) {
-      var error = new Error('Rome is burning');
-      s3.getObject.yieldsAsync(error);
-      deployKey.fetch('any/path', function (err) {
-        expect(err).to.equal(error);
-        done();
-      });
-    });
-
-    it('should log a fetch at `info`', function(done) {
-      var keyPath = '/plz/log/me/kthxbye';
-      deployKey.fetch(keyPath, function (err) {
-        if (err) { return done(err); }
-        expect(deployKey.log.info.calledWith(
-          'Fetching key from S3: ' + keyPath
-        )).to.be.true();
-        done();
-      });
-    });
-
     it('should log deploy key cache hits at `debug`', function(done) {
       var keyPath = '/wowza/plowza';
       var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
@@ -202,38 +185,86 @@ describe('deploy-key', function() {
       });
     });
 
-    it('should log errors when creating cache path at `error`', function(done) {
-      var error = new Error('mkdir errooorz');
+    it('should yield a 500 Boom error if the cache create failed', function(done) {
+      var error = new Error('wuut?');
       childProcess.exec.yieldsAsync(error);
-      var keyPath = 'some/patthhz';
-      var cachePath = deployKey.getCachePath(keyPath);
-      deployKey.fetch(keyPath, function (err) {
-        expect(deployKey.log.error.calledWith(
-          error, 'Could not create deploy key cache entry: ' + cachePath
+      deployKey.fetch('a/b', function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(
+          err, 500, 'deployKey.fetch.createCachePath'
         )).to.be.true();
         done();
       });
     });
 
-    it('should log errors when fetching from S3 at `error`', function(done) {
-      var error = new Error('S3 bad, bad nasty bad');
+    it('should yield 4XX errors from S3', function(done) {
+      var error = new Error('This should be a 404');
+      error.statusCode = 404;
       s3.getObject.yieldsAsync(error);
-      deployKey.fetch('/paths/yall', function (err) {
-        expect(deployKey.log.error.calledWith(
-          error, 'Could not fetch object from S3'
-        )).to.be.true();
+      deployKey.fetch('sup', function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(404);
+        expect(errorCat.wrap.calledWith(error, 404, 'deployKey.fetch.downloadKey'))
+          .to.be.true();
         done();
       });
     });
 
-    it('should log errors when setting permissions on keys at `error`', function(done) {
-      var error = new Error('chschmood errorz');
-      childProcess.exec.onSecondCall().yieldsAsync(error);
-      var keyPath = 'some/key';
+    it('should yield 502 Boom error if S3 failed with a 5XX', function(done) {
+      var error = new Error('This should be a 404');
+      error.statusCode = 509;
+      s3.getObject.yieldsAsync(error);
+      deployKey.fetch('yo', function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(502);
+        expect(errorCat.wrap.calledWith(error, 502, 'deployKey.fetch.downloadKey'))
+          .to.be.true();
+        done();
+      });
+    });
+
+    it('should yield a 500 Boom error if the key file write failed', function(done) {
+      var error = new Error('Mi kno rite gud');
+      var keyPath = 'knee/flaf';
       var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
+      fs.writeFile.yieldsAsync(error);
       deployKey.fetch(keyPath, function (err) {
-        expect(deployKey.log.error.calledWith(
-          error, 'Could not change permissions on key: ' + sshKeyPath
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(error, 500, 'deployKey.fetch.downloadKey'))
+          .to.be.true();
+        expect(err.data.keyPath).to.equal(sshKeyPath);
+        done();
+      });
+    });
+
+    it('should yield a 500 Boom error if the file permissions could not be changed', function(done) {
+      var error = new Error('chmod is taking a schnooze');
+      var keyPath = 'wii/braf';
+      var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
+      childProcess.exec.onSecondCall().yields(error);
+      deployKey.fetch(keyPath, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(error, 500, 'deployKey.fetch.chmodKey'))
+          .to.be.true();
+        expect(err.data.keyPath).to.equal(sshKeyPath);
+        done();
+      });
+    });
+
+    it('should log a fetch at `info`', function(done) {
+      var keyPath = '/plz/log/me/kthxbye';
+      deployKey.fetch(keyPath, function (err) {
+        if (err) { return done(err); }
+        expect(deployKey.log.info.calledWith(
+          'Fetching key from S3: ' + keyPath
         )).to.be.true();
         done();
       });
@@ -278,18 +309,21 @@ describe('deploy-key', function() {
       });
     });
 
-    it('should log errors when executing commands at `error`', function(done) {
+    it('should yield a 500 Boom error when a command fails', function(done) {
       var error = new Error('ssh crunch wrapped command error (by taco bell)');
       childProcess.exec.yieldsAsync(error);
       var command = 'who | finger';
       var keyPath = 'run/for/the/border';
       var sshCommand = 'ssh-agent sh -c \'' +
         'ssh-add ' + keyPath + ' && ' +
-        command +  '\'';
-      deployKey.exec(keyPath, command, function () {
-        expect(deployKey.log.error.calledWith()).to.be.true(
-          error, 'Unable to execute command: ' + sshCommand
-        );
+        'who \\| finger\'';
+      deployKey.exec(keyPath, command, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.wrap.calledWith(error, 500, 'deployKey.exec')).to.be.true();
+        expect(err.data.keyPath).to.equal(keyPath);
+        expect(err.data.command).to.equal(command);
+        expect(err.data.sshCommand).to.equal(sshCommand);
         done();
       });
     });

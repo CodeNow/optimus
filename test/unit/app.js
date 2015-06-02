@@ -27,22 +27,22 @@ describe('app', function() {
     app.__set__('middleware.bodyParser', { json: noop });
     middleware = app.__get__('middleware');
     sinon.spy(middleware, 'connectDatadog');
-    sinon.spy(middleware, 'expressBoom');
     sinon.spy(middleware, 'notFound');
     sinon.spy(middleware, 'applyRules');
     sinon.spy(middleware.bodyParser, 'json');
     sinon.spy(middleware, 'logger');
+    sinon.spy(middleware, 'error');
     done();
   });
 
   afterEach(function (done) {
     app.__get__('app').use.restore();
     middleware.connectDatadog.restore();
-    middleware.expressBoom.restore();
     middleware.applyRules.restore();
     middleware.notFound.restore();
     middleware.bodyParser.json.restore();
     middleware.logger.restore();
+    middleware.error.restore();
     done();
   });
 
@@ -59,7 +59,6 @@ describe('app', function() {
       var instance = app.getInstance();
       expect(app.__get__('initialized')).to.be.true();
       app.getInstance();
-      expect(middleware.expressBoom.calledOnce).to.be.true();
       expect(middleware.bodyParser.json.calledOnce).to.be.true();
       expect(middleware.notFound.calledOnce).to.be.true();
       done();
@@ -69,14 +68,6 @@ describe('app', function() {
       var instance = app.getInstance();
       expect(instance).to.equal(app.__get__('app'));
       expect(instance.listen).to.be.a.function();
-      done();
-    });
-
-    it('should use express-boom for error generation', function(done) {
-      var instance = app.getInstance();
-      expect(middleware.expressBoom.calledOnce).to.be.true();
-      var expressBoom = middleware.expressBoom.returnValues[0];
-      expect(instance.use.calledWith(expressBoom)).to.be.true();
       done();
     });
 
@@ -128,6 +119,14 @@ describe('app', function() {
       expect(middleware.logger.calledOnce).to.be.true();
       var logger = middleware.logger.returnValues[0];
       expect(instance.use.calledWith(logger)).to.be.true();
+      done();
+    });
+
+    it('should use the error handler middleware', function(done) {
+      var instance = app.getInstance();
+      expect(middleware.error.calledOnce).to.be.true();
+      var error = middleware.error.returnValues[0];
+      expect(instance.use.calledWith(error)).to.be.true();
       done();
     });
   }); // end 'getInstance'
