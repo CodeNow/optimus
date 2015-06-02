@@ -31,6 +31,7 @@ describe('app', function() {
     sinon.spy(middleware, 'notFound');
     sinon.spy(middleware, 'applyRules');
     sinon.spy(middleware.bodyParser, 'json');
+    sinon.spy(middleware, 'logger');
     done();
   });
 
@@ -41,6 +42,7 @@ describe('app', function() {
     middleware.applyRules.restore();
     middleware.notFound.restore();
     middleware.bodyParser.json.restore();
+    middleware.logger.restore();
     done();
   });
 
@@ -118,6 +120,14 @@ describe('app', function() {
       expect(instance.use.calledWith(connectDatadog)).to.be.true();
 
       process.env.NODE_ENV = nodeEnv;
+      done();
+    });
+
+    it('should use bunyan logging', function(done) {
+      var instance = app.getInstance();
+      expect(middleware.logger.calledOnce).to.be.true();
+      var logger = middleware.logger.returnValues[0];
+      expect(instance.use.calledWith(logger)).to.be.true();
       done();
     });
   }); // end 'getInstance'

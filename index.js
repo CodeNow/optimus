@@ -1,13 +1,12 @@
 'use strict';
 
 require('loadenv')('optimus:env');
+
 var ClusterManager = require('cluster-man');
 var monitor = require('monitor-dog');
-var debug = require('debug');
-var info = debug('optimus:info');
-var error = debug('optimus:error');
 var app = require('./lib/app');
 var cache = require('./lib/cache');
+var logger = require('./lib/logger');
 
 /**
  * User repository transformer.
@@ -19,7 +18,7 @@ var cache = require('./lib/cache');
  * Master process.
  */
 function master() {
-  info('Master process started.');
+  logger.info('Master process started');
   monitor.histogram('status', 1);
   cache.setPurgeInterval();
 }
@@ -30,12 +29,12 @@ function master() {
 function worker() {
   var server = app.getInstance().listen(process.env.PORT, function (err) {
     if (err) {
-      error('Application start error: ' + err.stack);
+      logger.error(err, 'Server failed to start');
       return process.exit(1);
     }
     var host = server.address().address;
     var port = server.address().port;
-    info('Server listening on port http://' + host + ':' + port);
+    logger.info('Server listening on port http://' + host + ':' + port);
   });
 }
 
@@ -45,7 +44,7 @@ function worker() {
  * @param {function} done Called when we are done.
  */
 function beforeExit(err, done) {
-  info('Master process exiting: ' + err.stack);
+  logger.info('Master process exiting: ' + err.stack);
   monitor.histogram('status', 0);
   done();
 }
@@ -53,7 +52,7 @@ function beforeExit(err, done) {
 // Initialize the cache and start the cluster
 cache.initialize(function (err) {
   if (err) {
-    error('Could not initialize cache: ' + err.stack);
+    logger.error(err, 'Cache failed to initialize');
     return process.exit(1);
   }
 

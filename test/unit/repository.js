@@ -83,6 +83,10 @@ describe('repository', function() {
       sinon.stub(cache, 'lock').yieldsAsync();
       sinon.stub(cache, 'touch').yieldsAsync();
       sinon.stub(cache, 'unlock').yieldsAsync();
+      sinon.spy(repository.log, 'info');
+      sinon.spy(repository.log, 'debug');
+      sinon.spy(repository.log, 'error');
+      sinon.spy(repository.log, 'trace');
       done();
     });
 
@@ -97,6 +101,10 @@ describe('repository', function() {
       cache.lock.restore();
       cache.touch.restore();
       cache.unlock.restore();
+      repository.log.info.restore();
+      repository.log.debug.restore();
+      repository.log.error.restore();
+      repository.log.trace.restore();
       done();
     });
 
@@ -431,6 +439,117 @@ describe('repository', function() {
       repository.fetch('some/key', repo, commitish, function (err, path) {
         if (err) { return done(err); }
         expect(path).to.equal(commitishPath);
+        done();
+      });
+    });
+
+    it('should log spinlock acquisitions at `trace`', function(done) {
+      var repo = 'git@github.com:awesome/sauce';
+      var commitish = 'abc12343';
+      var repoPath = repository.getRepoPath(repo);
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('some/key/yo', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(repository.log.trace.calledWith(
+          'Spin-lock acquired: ' + repoPath
+        )).to.be.true();
+        expect(repository.log.trace.calledWith(
+          'Spin-lock acquired: ' + commitishPath
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log spinlock frees at `trace`', function(done) {
+      var repo = 'git@github.com:crazy/cool';
+      var commitish = 'Axddndkndbc3';
+      var repoPath = repository.getRepoPath(repo);
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      repository.fetch('some/key/yoshi', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(repository.log.trace.calledWith(
+          'Spin-lock freed: ' + repoPath
+        )).to.be.true();
+        expect(repository.log.trace.calledWith(
+          'Spin-lock freed: ' + commitishPath
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log the fetch at `info`', function(done) {
+      var repo = 'git@github.com:lazy/school';
+      var commitish = '38hfsdif39n';
+      repository.fetch('totes/good', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(repository.log.info.calledWith(
+          'Fetching repository ' + repo + '#' + commitish
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log cache hits at `debug`', function(done) {
+      fs.existsSync.returns(true);
+      var repo = 'git@github.com:grazy/schpool';
+      var commitish = 'n294nndlw02';
+      repository.fetch('goats/great', repo, commitish, function (err, path) {
+        if (err) { return done(err); }
+        expect(repository.log.debug.calledWith(
+          'Cache hit for ' + repo + '#' + commitish
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log missing keys at `error`', function(done) {
+      fs.existsSync.onThirdCall().returns(false);
+      var repo = 'git@github.com:ipitythe/fool';
+      var commitish = '209s,,,dksj2';
+      var key = 'moats/fate';
+      repository.fetch(key, repo, commitish, function () {
+        expect(repository.log.error.calledWith(
+          'Could not find ssh key: ' + key
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log repository cache create errors at `error`', function(done) {
+      var error = new Error('mkdir is apathetic concerning your desires');
+      childProcess.exec.yieldsAsync(new Error())
+      var repo = 'git@github.com:slam/jam';
+      var commitish = '1234567890';
+      repository.fetch('bloats/hate', repo, commitish, function () {
+        expect(repository.log.error.calledWith(
+          error, 'Could not create repository cache path'
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log commitish cache create errors at `error`', function(done) {
+      var error = new Error('mkdir is sad, try again later');
+      childProcess.exec.onSecondCall().yieldsAsync(new Error())
+      var repo = 'git@github.com:cram/ham';
+      var commitish = '0987654321`';
+      repository.fetch('gropes/late', repo, commitish, function () {
+        expect(repository.log.error.calledWith(
+          error, 'Could not create commitish cache path'
+        )).to.be.true();
+        done();
+      });
+    });
+
+    it('should log .git removal errors at `error`', function(done) {
+      var error = new Error('rm is protesting unfair command labor laws');
+      childProcess.exec.onThirdCall().yieldsAsync(new Error())
+      var repo = 'git@github.com:flim/flam';
+      var commitish = 'ghjklvbnm67890&*()';
+      repository.fetch('popes/plate', repo, commitish, function () {
+        expect(repository.log.error.calledWith(
+          error, 'Could not remove .git from commitish directory'
+        )).to.be.true();
         done();
       });
     });
