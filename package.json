@@ -4,7 +4,7 @@
   "description": "Transformer service for user repositories",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js | ./node_modules/.bin/bunyan",
+    "start": "node index.js | bunyan",
     "doc": "jsdoc index.js lib/ -d doc/; open -a 'Google Chrome' doc/index.html",
     "lint": "jshint index.js lib/",
     "unit": "lab -v -c -m 200 -a code test/unit/",
