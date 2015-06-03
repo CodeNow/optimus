@@ -10,9 +10,7 @@ var util = require('util');
  * @module optimus:test
  * @author Ryan Sandor Richards
  */
-var MockResponse = module.exports = function () {
-  this.boom = new Boom();
-};
+var MockResponse = module.exports = function () {};
 util.inherits(MockResponse, EventEmitter);
 
 /**
@@ -28,27 +26,4 @@ MockResponse.prototype.json = function (object) {
  */
 MockResponse.prototype.send = function (object) {
   this.emit('send', object);
-};
-
-/**
- * Mocks express-boom.
- * @class
- */
-var Boom = function() {};
-util.inherits(Boom, EventEmitter);
-
-/**
- * Mock of the `boom.badRequest` method.
- * @param {Error} err Error sent to the bad request.
- */
-Boom.prototype.badRequest = function (err) {
-  this.emit('badRequest', err);
-};
-
-/**
- * Mock of the `boom.badImplementation` method.
- * @param {Error} err Error sent to bad implementation.
- */
-Boom.prototype.badImplementation = function (err) {
-  this.emit('badImplementation', err);
 };

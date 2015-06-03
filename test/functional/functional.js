@@ -200,4 +200,24 @@ describe('functional', function() {
       );
     });
   }); // end 'PUT /'
+
+  describe('app', function() {
+    var server;
+    before(function (done) {
+      server = app.getInstance().listen(process.env.PORT, done);
+    });
+
+    after(function (done) {
+      server.close(done);
+    });
+
+    it('should return a 404 for an unknown route', function(done) {
+      var url = 'http://127.0.0.1:' + process.env.PORT + '/not-there';
+      request.get({ url: url, json: true }, function (err, response, body) {
+        expect(body.statusCode).to.equal(404);
+        expect(body.error).to.equal('Not Found');
+        done();
+      });
+    });
+  });
 }); // end 'functional'

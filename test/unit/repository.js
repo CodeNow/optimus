@@ -17,6 +17,7 @@ var monitor = require('monitor-dog');
 var Git = require('../../lib/git');
 var repository = require('../../lib/repository');
 var cache = require('../../lib/cache');
+var errorCat = require('../../lib/error');
 
 describe('repository', function() {
   describe('interface', function() {
@@ -87,6 +88,8 @@ describe('repository', function() {
       sinon.spy(repository.log, 'debug');
       sinon.spy(repository.log, 'error');
       sinon.spy(repository.log, 'trace');
+      sinon.spy(errorCat, 'wrap');
+      sinon.spy(errorCat, 'create');
       done();
     });
 
@@ -105,6 +108,8 @@ describe('repository', function() {
       repository.log.debug.restore();
       repository.log.error.restore();
       repository.log.trace.restore();
+      errorCat.wrap.restore();
+      errorCat.create.restore();
       done();
     });
 
@@ -502,54 +507,161 @@ describe('repository', function() {
       });
     });
 
-    it('should log missing keys at `error`', function(done) {
+    it('should yield a Boom 500 if the ssh key is missing', function(done) {
       fs.existsSync.onThirdCall().returns(false);
       var repo = 'git@github.com:ipitythe/fool';
       var commitish = '209s,,,dksj2';
       var key = 'moats/fate';
-      repository.fetch(key, repo, commitish, function () {
-        expect(repository.log.error.calledWith(
-          'Could not find ssh key: ' + key
+      repository.fetch(key, repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.create.calledWith(
+          500, 'repository.fetch: Could not find ssh key'
         )).to.be.true();
+        expect(errorCat.create.firstCall.args[2])
+          .to.deep.equal({ key: key });
         done();
       });
     });
 
-    it('should log repository cache create errors at `error`', function(done) {
-      var error = new Error('mkdir is apathetic concerning your desires');
-      childProcess.exec.yieldsAsync(new Error())
+    it('should yield a Boom 500 if the repository cache create fails', function(done) {
+      var error = new Error('mkdir is apathetic with concern to your desires');
+      childProcess.exec.yieldsAsync(error)
       var repo = 'git@github.com:slam/jam';
       var commitish = '1234567890';
-      repository.fetch('bloats/hate', repo, commitish, function () {
-        expect(repository.log.error.calledWith(
-          error, 'Could not create repository cache path'
+      var repoPath = repository.getRepoPath(repo);
+      repository.fetch('bloats/hate', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(errorCat.wrap.calledWith(
+          error, 500, 'repository.fetchFromRemote.createRepoDirectory'
         )).to.be.true();
+        expect(err.data.path).to.equal(repoPath);
         done();
       });
     });
 
-    it('should log commitish cache create errors at `error`', function(done) {
-      var error = new Error('mkdir is sad, try again later');
-      childProcess.exec.onSecondCall().yieldsAsync(new Error())
-      var repo = 'git@github.com:cram/ham';
-      var commitish = '0987654321`';
-      repository.fetch('gropes/late', repo, commitish, function () {
-        expect(repository.log.error.calledWith(
-          error, 'Could not create commitish cache path'
+    it('should yield a Boom 502 if the repository clone fails', function(done) {
+      var error = new Error('did you mean git OWNED?');
+      Git.prototype.clone.yieldsAsync(error);
+      var repo = 'git@github.com:Wow/Neat';
+      var commitish = '#v1.2.3';
+      repository.fetch('some/key', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(502);
+        expect(errorCat.wrap.calledWith(
+          error, 502, 'repository.fetchFromRemote.createRepoDirectory'
         )).to.be.true();
+        expect(err.data).to.deep.equal({
+          repo: repo,
+          path: repository.getRepoPath(repo)
+        });
         done();
       });
     });
 
-    it('should log .git removal errors at `error`', function(done) {
-      var error = new Error('rm is protesting unfair command labor laws');
-      childProcess.exec.onThirdCall().yieldsAsync(new Error())
-      var repo = 'git@github.com:flim/flam';
-      var commitish = 'ghjklvbnm67890&*()';
-      repository.fetch('popes/plate', repo, commitish, function () {
-        expect(repository.log.error.calledWith(
-          error, 'Could not remove .git from commitish directory'
+    it('should yield a Boom 500 if the commitish directory create fails', function(done) {
+      var error = new Error('cp is being a brat today, try after his nap');
+      childProcess.exec.onSecondCall().yieldsAsync(error);
+      var repo = 'git@github.com:So/Smooth';
+      var commitish = '#v1.awesome';
+      repository.fetch('das/kehy', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(
+          error, 500, 'repository.fetchFromRemote.createCommitishDir'
         )).to.be.true();
+        expect(err.data).to.deep.equal({
+          repo: repo,
+          commitish: commitish,
+          repositoryPath: repository.getRepoPath(repo),
+          commitishPath: repository.getCommitishPath(repo, commitish)
+        });
+        done();
+      });
+    });
+
+    it('should yield a Boom 500 if the SHAs comparison fails', function(done) {
+      var error = new Error('Did you mean git die in a fire?');
+      Git.prototype.getSHA.yieldsAsync(error);
+      var repo = 'git@github.com:super/powers';
+      var commitish = '#v101010101000101';
+      repository.fetch('sssssskeeeyss', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(
+          error, 500, 'repository.fetchFromRemote.compareSHAs'
+        )).to.be.true();
+        expect(err.data).to.deep.equal({
+          repo: repo,
+          commitish: commitish
+        });
+        done();
+      });
+    });
+
+    it('should yield a Boom 502 if the fetch all fails', function(done) {
+      var error = new Error('Did you mean git flinch?');
+      Git.prototype.fetchAll.yieldsAsync(error);
+      var repo = 'git@github.com:austin/powers';
+      var commitish = '#v200.3.28282819';
+      var key = 'keysaregood';
+      repository.fetch(key, repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(502);
+        expect(errorCat.wrap.calledWith(
+          error, 502, 'repository.fetchFromRemote.fetchAll'
+        )).to.be.true();
+        expect(err.data).to.deep.equal({
+          deployKey: key,
+          repo: repo
+        });
+        done();
+      });
+    });
+
+    it('should yield a Boom 500 if the checkout fails', function(done) {
+      var error = new Error('Did you mean git body check into boards?');
+      Git.prototype.checkout.yieldsAsync(error);
+      var repo = 'git@github.com:double/trouble';
+      var commitish = '#v2';
+      repository.fetch('keyz', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(
+          error, 500, 'repository.fetchFromRemote.checkout'
+        )).to.be.true();
+        expect(err.data).to.deep.equal({
+          repo: repo,
+          commitish: commitish
+        });
+        done();
+      });
+    });
+
+    it('should yield a Boom 500 if the .git removal fails', function(done) {
+      var error = new Error('Did you mean git body check into boards?');
+      childProcess.exec.onThirdCall().yieldsAsync(error);
+      var repo = 'git@github.com:triple/threat';
+      var commitish = '#v2.4';
+      var commitishPath = repository.getCommitishPath(repo, commitish);
+      var rmCommand = 'rm -rf ' + commitishPath + '/.git';
+      repository.fetch('keylimepie', repo, commitish, function (err) {
+        expect(err).to.exist();
+        expect(err.isBoom).to.be.true();
+        expect(err.output.payload.statusCode).to.equal(500);
+        expect(errorCat.wrap.calledWith(
+          error, 500, 'repository.fetchFromRemote.removeDotGit'
+        )).to.be.true();
+        expect(err.data).to.deep.equal({
+          commitishPath: commitishPath,
+          command: rmCommand
+        });
         done();
       });
     });
