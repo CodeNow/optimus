@@ -27,22 +27,16 @@ describe('app', function() {
     app.__set__('middleware.bodyParser', { json: noop });
     middleware = app.__get__('middleware');
     sinon.spy(middleware, 'connectDatadog');
-    sinon.spy(middleware, 'notFound');
-    sinon.spy(middleware, 'applyRules');
-    sinon.spy(middleware.bodyParser, 'json');
     sinon.spy(middleware, 'logger');
-    sinon.spy(middleware, 'error');
+    sinon.spy(middleware.bodyParser, 'json');
     done();
   });
 
   afterEach(function (done) {
     app.__get__('app').use.restore();
     middleware.connectDatadog.restore();
-    middleware.applyRules.restore();
-    middleware.notFound.restore();
     middleware.bodyParser.json.restore();
     middleware.logger.restore();
-    middleware.error.restore();
     done();
   });
 
@@ -60,7 +54,6 @@ describe('app', function() {
       expect(app.__get__('initialized')).to.be.true();
       app.getInstance();
       expect(middleware.bodyParser.json.calledOnce).to.be.true();
-      expect(middleware.notFound.calledOnce).to.be.true();
       done();
     });
 
@@ -81,17 +74,13 @@ describe('app', function() {
 
     it('should set the `PUT /` route', function(done) {
       var instance = app.getInstance();
-      expect(middleware.applyRules.calledOnce).to.be.true();
-      var applyRules = middleware.applyRules.returnValues[0];
-      expect(instance.put.calledWith('/', applyRules)).to.be.true();
+      expect(instance.put.calledWith('/', middleware.applyRules)).to.be.true();
       done();
     });
 
     it('should set a 404 handler', function(done) {
       var instance = app.getInstance();
-      expect(middleware.notFound.calledOnce).to.be.true();
-      var notFound = middleware.notFound.returnValues[0];
-      expect(instance.use.calledWith(notFound)).to.be.true();
+      expect(instance.use.calledWith(middleware.notFound)).to.be.true();
       done();
     });
 
@@ -124,9 +113,7 @@ describe('app', function() {
 
     it('should use the error handler middleware', function(done) {
       var instance = app.getInstance();
-      expect(middleware.error.calledOnce).to.be.true();
-      var error = middleware.error.returnValues[0];
-      expect(instance.use.calledWith(error)).to.be.true();
+      expect(instance.use.calledWith(middleware.error)).to.be.true();
       done();
     });
   }); // end 'getInstance'
