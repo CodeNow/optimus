@@ -57,7 +57,7 @@
     "error-cat": "^1.3.0",
     "express": "^4.12.3",
     "express-bunyan-logger": "^1.1.1",
-    "fs-transform": "git://github.com/runnable/fs-transform#a2018bed964f484b88eea4eeeecf82388d3930c4",
+    "fs-transform": "git://github.com/runnable/fs-transform#69a995f7f87621f88b730806fb215bfb8d5b9a07",
     "loadenv": "^1.0.3",
     "monitor-dog": "^1.1.2",
     "simple-api-client": "^0.6.0"
