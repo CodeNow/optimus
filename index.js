@@ -18,9 +18,16 @@ var logger = require('./lib/logger');
  * Master process.
  */
 function master() {
-  logger.info('Master process started');
-  monitor.histogram('status', 1);
-  cache.setPurgeInterval();
+  cache.initialize(function (err) {
+    if (err) {
+      logger.error(err, 'Cache failed to initialize');
+      return process.exit(1);
+      monitor.histogram('status', 0);
+    }
+    logger.info('Master process started');
+    monitor.histogram('status', 1);
+    cache.setPurgeInterval();
+  });
 }
 
 /**
@@ -49,18 +56,10 @@ function beforeExit(err, done) {
   done();
 }
 
-// Initialize the cache and start the cluster
-cache.initialize(function (err) {
-  if (err) {
-    logger.error(err, 'Cache failed to initialize');
-    return process.exit(1);
-  }
-
-  // Create and start the cluster
-  var cluster = new ClusterManager({
-    master: master,
-    worker: worker,
-    beforeExit: beforeExit
-  });
-  cluster.start();
+// Create and start the cluster
+var cluster = new ClusterManager({
+  master: master,
+  worker: worker,
+  beforeExit: beforeExit
 });
+cluster.start();
