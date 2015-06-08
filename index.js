@@ -21,8 +21,8 @@ function master() {
   cache.initialize(function (err) {
     if (err) {
       logger.error(err, 'Cache failed to initialize');
-      return process.exit(1);
       monitor.histogram('status', 0);
+      return process.exit(1);
     }
     logger.info('Master process started');
     monitor.histogram('status', 1);
