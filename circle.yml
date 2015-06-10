@@ -1,6 +1,6 @@
 dependencies:
   override:
-    - nvm install 0.12.4
+    - nvm install 0.10.38
     - nvm alias default 0.12.4
     - npm install -g npm@2.8.3
     - npm install
