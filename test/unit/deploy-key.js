@@ -35,6 +35,7 @@ describe('deploy-key', function() {
     sinon.spy(deployKey.log, 'debug');
     sinon.spy(deployKey.log, 'error');
     sinon.spy(deployKey.log, 'fatal');
+    sinon.spy(deployKey.log, 'trace');
     sinon.spy(errorCat, 'wrap');
     done();
   });
@@ -50,6 +51,7 @@ describe('deploy-key', function() {
     deployKey.log.debug.restore();
     deployKey.log.error.restore();
     deployKey.log.fatal.restore();
+    deployKey.log.trace.restore();
     errorCat.wrap.restore();
     done();
   });
@@ -172,14 +174,14 @@ describe('deploy-key', function() {
       });
     });
 
-    it('should log deploy key cache hits at `debug`', function(done) {
+    it('should log deploy key cache hits at `trace`', function(done) {
       var keyPath = '/wowza/plowza';
       var sshKeyPath = deployKey.getSSHKeyPath(keyPath);
       fs.existsSync.returns(true);
       deployKey.fetch(keyPath, function (err) {
         if (err) { return done(err); }
-        expect(deployKey.log.debug.calledWith(
-          'SSH Key Cache Hit: ' + sshKeyPath
+        expect(deployKey.log.trace.calledWith(
+          { sshKeyPath: sshKeyPath }, 'SSH Key Cache Hit'
         )).to.be.true();
         done();
       });
@@ -264,7 +266,7 @@ describe('deploy-key', function() {
       deployKey.fetch(keyPath, function (err) {
         if (err) { return done(err); }
         expect(deployKey.log.info.calledWith(
-          'Fetching key from S3: ' + keyPath
+          { keyPath: keyPath }, 'Fetching key from S3'
         )).to.be.true();
         done();
       });

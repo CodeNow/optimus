@@ -86,8 +86,10 @@ describe('Git', function() {
       var repo = 'git@github.com:Michigan/Eucher';
       var path = '/gonna/cheat';
       git.clone(repo, path, function () {
-        expect(Git.log.trace.calledWith('Git: cloning ' + repo + ' to ' + path))
-          .to.be.true();
+        expect(Git.log.trace.calledWith(
+          { repo: repo, path: path },
+          'Git: cloning ' + repo
+        )).to.be.true();
         done();
       });
     });
@@ -146,8 +148,9 @@ describe('Git', function() {
     it('should log the checkout at `trace`', function(done) {
       var commitish = 'superduperss';
       git.checkout(commitish, function () {
-        expect(Git.log.trace.calledWith('Git: checkout ' + commitish))
-          .to.be.true();
+        expect(Git.log.trace.calledWith(
+          { commitish: commitish }, 'Git: checkout ' + commitish
+        )).to.be.true();
         done();
       });
     });

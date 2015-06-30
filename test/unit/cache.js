@@ -106,7 +106,7 @@ describe('cache', function() {
       childProcess.exec.yieldsAsync(error);
       cache.initialize(function (err) {
         var msg = 'Unable to initialize cache: ' + process.env.DEPLOY_KEY_CACHE;
-        expect(cache.log.fatal.calledWith(err, msg)).to.be.true();
+        expect(cache.log.fatal.calledOnce).to.be.true();
         done();
       });
     });
@@ -116,13 +116,16 @@ describe('cache', function() {
         if (err) { return done(err); }
         expect(cache.log.debug.callCount).to.equal(3);
         expect(cache.log.debug.calledWith(
-          'Cache initialized: ' + process.env.DEPLOY_KEY_CACHE
+          { path: process.env.DEPLOY_KEY_CACHE },
+          'Cache initialized'
         )).to.be.true();
         expect(cache.log.debug.calledWith(
-          'Cache initialized: ' + process.env.REPOSITORY_CACHE
+          { path: process.env.REPOSITORY_CACHE },
+          'Cache initialized'
         )).to.be.true();
         expect(cache.log.debug.calledWith(
-          'Cache initialized: ' + process.env.COMMITISH_CACHE
+          { path: process.env.COMMITISH_CACHE },
+          'Cache initialized'
         )).to.be.true();
         done();
       });
@@ -242,7 +245,7 @@ describe('cache', function() {
       childProcess.exec.yieldsAsync(error);
       cache.usage(function (err) {
         expect(cache.log.error.calledWith(
-          error, 'Unable to collect disk usage information'
+          { err: error }, 'Unable to collect disk usage information'
         )).to.be.true();
         done();
       });
@@ -288,7 +291,8 @@ describe('cache', function() {
       var error = new Error('Party on Garth.');
       childProcess.exec.yieldsAsync(error);
       cache.purge(function (err) {
-        expect(cache.log.error.calledWith(error, 'Purge failed')).to.be.true();
+        expect(cache.log.error.calledWith({ err: error }, 'Purge failed'))
+          .to.be.true();
         done();
       });
     });
