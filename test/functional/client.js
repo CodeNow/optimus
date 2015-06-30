@@ -57,7 +57,6 @@ describe('functional', function() {
         expect(resp.statusCode).to.equal(200);
         expect(resp.body.warnings).to.be.an.array();
         expect(resp.body.diff).to.be.a.string();
-        expect(resp.body.script).to.be.a.string();
         expect(resp.body.results).to.be.an.array();
         done();
       });

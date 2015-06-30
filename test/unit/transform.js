@@ -266,7 +266,6 @@ describe('transform', function() {
       response.once('json', function (object) {
         expect(object.warnings).to.deep.equal(transformer.warnings);
         expect(object.diff).to.equal(transformer.getDiff());
-        expect(object.script).to.equal(transformer.getScript());
         done();
       });
       transform.applyRules(request, response);
