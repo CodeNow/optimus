@@ -456,10 +456,10 @@ describe('repository', function() {
       repository.fetch('some/key/yo', repo, commitish, function (err, path) {
         if (err) { return done(err); }
         expect(repository.log.trace.calledWith(
-          'Spin-lock acquired: ' + repoPath
+          { path: repoPath }, 'Spin-lock acquired'
         )).to.be.true();
         expect(repository.log.trace.calledWith(
-          'Spin-lock acquired: ' + commitishPath
+          { path: commitishPath }, 'Spin-lock acquired'
         )).to.be.true();
         done();
       });
@@ -473,10 +473,10 @@ describe('repository', function() {
       repository.fetch('some/key/yoshi', repo, commitish, function (err, path) {
         if (err) { return done(err); }
         expect(repository.log.trace.calledWith(
-          'Spin-lock freed: ' + repoPath
+          { path: repoPath }, 'Spin-lock freed'
         )).to.be.true();
         expect(repository.log.trace.calledWith(
-          'Spin-lock freed: ' + commitishPath
+          { path: commitishPath }, 'Spin-lock freed'
         )).to.be.true();
         done();
       });
@@ -488,7 +488,7 @@ describe('repository', function() {
       repository.fetch('totes/good', repo, commitish, function (err, path) {
         if (err) { return done(err); }
         expect(repository.log.info.calledWith(
-          'Fetching repository ' + repo + '#' + commitish
+          { repo: repo, commitish: commitish }, 'Repository fetch'
         )).to.be.true();
         done();
       });
@@ -501,7 +501,7 @@ describe('repository', function() {
       repository.fetch('goats/great', repo, commitish, function (err, path) {
         if (err) { return done(err); }
         expect(repository.log.debug.calledWith(
-          'Cache hit for ' + repo + '#' + commitish
+          { repo: repo, commitish: commitish }, 'Repository cache hit'
         )).to.be.true();
         done();
       });
