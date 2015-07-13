@@ -152,7 +152,7 @@ describe('functional', function() {
 
       request.put(params, function (err, response, body) {
         if (err) { return done(err); }
-        var expectedKeys = ['warnings', 'diff', 'results', 'script'];
+        var expectedKeys = ['warnings', 'diff', 'results'];
         expectedKeys.forEach(function (key) {
           expect(body[key]).to.exist();
         });
