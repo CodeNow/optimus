@@ -1,136 +1,132 @@
-'use strict';
+'use strict'
 
-var Lab = require('lab');
-var lab = exports.lab = Lab.script();
-var describe = lab.describe;
-var it = lab.it;
-var before = lab.before;
-var beforeEach = lab.beforeEach;
-var after = lab.after;
-var afterEach = lab.afterEach;
-var Code = require('code');
-var expect = Code.expect;
-var sinon = require('sinon');
+const Lab = require('lab')
+const lab = exports.lab = Lab.script()
+const describe = lab.describe
+const it = lab.it
+const before = lab.before
+const after = lab.after
+const Code = require('code')
+const expect = Code.expect
+const sinon = require('sinon')
 
-require('loadenv')('optimus:env');
-var fs = require('fs');
-var async = require('async');
-var request = require('request');
-var childProcess = require('child_process');
-var cache = require('../../lib/cache');
-var deployKey = require('../../lib/deploy-key');
-var repository = require('../../lib/repository');
-var app = require('../../lib/app');
-var createCounter = require('callback-count');
+require('loadenv')('optimus:env')
+const fs = require('fs')
+const request = require('request')
+const deployKey = require('../../lib/deploy-key')
+const repository = require('../../lib/repository')
+const app = require('../../lib/app')
+const createCounter = require('callback-count')
 
-var fixtureCache = require('../fixtures/fixture-cache');
-var applicationRoot = require('app-root-path').toString();
+const fixtureCache = require('../fixtures/fixture-cache')
+const applicationRoot = require('app-root-path').toString()
 
-describe('functional', function() {
-  before(fixtureCache.create);
-  after(fixtureCache.destroy);
+describe('functional', () => {
+  before(fixtureCache.create)
+  after(fixtureCache.destroy)
 
-  describe('deploy-key', function() {
-    it('should fetch deploy keys from S3', function(done) {
-      deployKey.fetch('mock/key', function (err) {
-        if (err) { return done(err); }
-        var keyPath = process.env.DEPLOY_KEY_CACHE + '/mock.key/ssh-key';
-        var mockPath = applicationRoot + '/test/fixtures/mock-ssh-key';
-        expect(fs.existsSync(keyPath)).to.be.true();
-        var expectedContent = fs.readFileSync(mockPath).toString();
-        var fetchedContent = fs.readFileSync(keyPath).toString();
-        expect(expectedContent).to.equal(fetchedContent);
-        done();
-      });
-    });
+  describe('deploy-key', () => {
+    it('should fetch deploy keys from S3', (done) => {
+      deployKey.fetch('mock/key', (err) => {
+        if (err) { return done(err) }
+        const keyPath = process.env.DEPLOY_KEY_CACHE + '/mock.key/ssh-key'
+        const mockPath = applicationRoot + '/test/fixtures/mock-ssh-key'
+        expect(fs.existsSync(keyPath)).to.be.true()
+        const expectedContent = fs.readFileSync(mockPath).toString()
+        const fetchedContent = fs.readFileSync(keyPath).toString()
+        expect(expectedContent).to.equal(fetchedContent)
+        done()
+      })
+    })
 
-    it('should return an error if the deploy key was not found', function(done) {
-      deployKey.fetch('/not/a/thing', function (err) {
-        expect(err.code).to.equal('NoSuchKey');
-        done();
-      });
-    });
-  }); // end 'deploy-key'
+    it('should return an error if the deploy key was not found', (done) => {
+      deployKey.fetch('/not/a/thing', (err) => {
+        expect(err.code).to.equal('NoSuchKey')
+        done()
+      })
+    })
+  }) // end 'deploy-key'
 
   // NOTE: This is *not* a unit test, and must be run as a suite
-  describe('repository', function() {
-    var keyPath;
+  describe('repository', () => {
+    var keyPath
 
-    before(function (done) {
-      deployKey.fetch('optimus-private', function (err, path) {
-        if (err) { return done(err); }
-        keyPath = path;
-        done();
-      });
-    });
+    before((done) => {
+      deployKey.fetch('optimus-private', (err, path) => {
+        if (err) { return done(err) }
+        keyPath = path
+        done()
+      })
+    })
 
-    it('should clone a repository', function(done) {
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = '170bdd7672b75c4a51e394cf5217c97817321b32';
-      repository.fetch(keyPath, repo, commitish, function (err, path) {
-        if (err) { return done(err); }
-        expect(fs.existsSync(path + '/A.txt')).to.be.true();
-        expect(fs.existsSync(path + '/B.txt')).to.be.true();
-        expect(fs.existsSync(path + '/C.txt')).to.be.false();
-        expect(fs.existsSync(path + '/README.md')).to.be.true();
-        done();
-      });
-    });
+    it('should clone a repository', (done) => {
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = '170bdd7672b75c4a51e394cf5217c97817321b32'
+      repository.fetch(keyPath, repo, commitish, (err, path) => {
+        if (err) { return done(err) }
+        expect(fs.existsSync(path + '/A.txt')).to.be.true()
+        expect(fs.existsSync(path + '/B.txt')).to.be.true()
+        expect(fs.existsSync(path + '/C.txt')).to.be.false()
+        expect(fs.existsSync(path + '/README.md')).to.be.true()
+        done()
+      })
+    })
 
-    it('should checkout a different commitish of the same repo', function(done) {
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = '8dc308afc20330948e74d0b85c116572326ecee5';
-      repository.fetch(keyPath, repo, commitish, function (err, path) {
-        if (err) { return done(err); }
-        expect(fs.existsSync(path + '/A.txt')).to.be.true();
-        expect(fs.existsSync(path + '/B.txt')).to.be.true();
-        expect(fs.existsSync(path + '/C.txt')).to.be.true();
-        expect(fs.existsSync(path + '/README.md')).to.be.true();
-        done();
-      });
-    });
+    it('should checkout a different commitish of the same repo', (done) => {
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = '8dc308afc20330948e74d0b85c116572326ecee5'
+      repository.fetch(keyPath, repo, commitish, (err, path) => {
+        if (err) { return done(err) }
+        expect(fs.existsSync(path + '/A.txt')).to.be.true()
+        expect(fs.existsSync(path + '/B.txt')).to.be.true()
+        expect(fs.existsSync(path + '/C.txt')).to.be.true()
+        expect(fs.existsSync(path + '/README.md')).to.be.true()
+        done()
+      })
+    })
 
-    it('should check the cache for repositories and commitishes', function(done) {
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = '8dc308afc20330948e74d0b85c116572326ecee5';
-      var spy = sinon.spy(fs.existsSync);
-      repository.fetch(keyPath, repo, commitish, function (err, path) {
-        expect(spy.calledWith(keyPath)).to.be.false();
-        done();
-      });
-    });
+    it('should check the cache for repositories and commitishes', (done) => {
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = '8dc308afc20330948e74d0b85c116572326ecee5'
+      const spy = sinon.spy(fs.existsSync)
+      repository.fetch(keyPath, repo, commitish, (err, path) => {
+        if (err) { return done(err) }
+        expect(spy.calledWith(keyPath)).to.be.false()
+        done()
+      })
+    })
 
-    it('should yield an error if the SSH key is missing', function(done) {
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = 'adifferentcommitish';
-      repository.fetch('bogus-/keyzz', repo, commitish, function (err, path) {
-        expect(err).to.not.be.null();
-        expect(path).to.be.undefined();
-        done();
-      });
-    });
-  }); // end 'repository'
+    it('should yield an error if the SSH key is missing', (done) => {
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = 'adifferentcommitish'
+      repository.fetch('bogus-/keyzz', repo, commitish, (err, path) => {
+        expect(err).to.not.be.null()
+        expect(path).to.be.undefined()
+        done()
+      })
+    })
+  }) // end 'repository'
 
   // NOTE: This is *not* a unit test, and must be run as a suite
-  describe('PUT /', function() {
-    var server;
-    before(function (done) {
-      fixtureCache.reset(function (err) {
-        if (err) { return done(err); }
-        server = app.getInstance().listen(process.env.PORT, done);
-      });
-    });
+  describe('PUT /', () => {
+    var server
+    before((done) => {
+      fixtureCache.reset((err) => {
+        if (err) { return done(err) }
+        server = app.getInstance().listen(process.env.PORT, done)
+      })
+    })
 
-    after(function (done) {
-      server.close(done);
-    });
+    after((done) => {
+      server.close(done)
+    })
 
-    it('should transform a repository', function(done) {
-      var key = 'optimus-private';
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = '170bdd7672b75c4a51e394cf5217c97817321b32';
+    it('should transform a repository', (done) => {
+      const key = 'optimus-private'
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = '170bdd7672b75c4a51e394cf5217c97817321b32'
 
-      var params = {
+      const params = {
         url: 'http://127.0.0.1:' + process.env.PORT + '?' +
           'deployKey=' + encodeURIComponent(key) + '&' +
           'commitish=' + encodeURIComponent(commitish) + '&' +
@@ -148,76 +144,77 @@ describe('functional', function() {
           }
         ],
         json: true
-      };
+      }
 
-      request.put(params, function (err, response, body) {
-        if (err) { return done(err); }
-        var expectedKeys = ['warnings', 'diff', 'results', 'script'];
-        expectedKeys.forEach(function (key) {
-          expect(body[key]).to.exist();
-        });
-        done();
-      });
-    });
+      request.put(params, (err, response, body) => {
+        if (err) { return done(err) }
+        const expectedKeys = ['warnings', 'diff', 'results', 'script']
+        expectedKeys.forEach((key) => {
+          expect(body[key]).to.exist()
+        })
+        done()
+      })
+    })
 
-    it('should correctly handle multiple quick requests', function(done) {
-      var key = 'optimus-private';
-      var repo = 'git@github.com:CodeNow/optimus-private-test';
-      var commitish = 'f9394ecda04836b9453f113b37e93008c08822ee';
-      var url = 'http://127.0.0.1:' + process.env.PORT + '?' +
+    it('should correctly handle multiple quick requests', (done) => {
+      const key = 'optimus-private'
+      const repo = 'git@github.com:CodeNow/optimus-private-test'
+      const commitish = 'f9394ecda04836b9453f113b37e93008c08822ee'
+      const url = 'http://127.0.0.1:' + process.env.PORT + '?' +
         'deployKey=' + encodeURIComponent(key) + '&' +
         'commitish=' + encodeURIComponent(commitish) + '&' +
-        'repo=' + encodeURIComponent(repo);
+        'repo=' + encodeURIComponent(repo)
 
-      var bodyOne = [{ action: 'replace', search: 'beta', replace: 'omega' }];
-      var bodyTwo = [{ action: 'rename', search: 'wow/D.txt', replace: 'D.txt' }];
-      var bodyThree = [{ action: 'replace', search: 'alpha', replace: 'AAA' }];
+      const bodyOne = [{ action: 'replace', search: 'beta', replace: 'omega' }]
+      const bodyTwo = [{ action: 'rename', search: 'wow/D.txt', replace: 'D.txt' }]
+      const bodyThree = [{ action: 'replace', search: 'alpha', replace: 'AAA' }]
 
-      var counter = createCounter(3, done);
+      const counter = createCounter(3, done)
 
       request.put(
         {url: url, body: bodyOne, json: true},
-        function (err, response, body) {
-          if (err) { return done(err); }
-          counter.next();
+        (err, response, body) => {
+          if (err) { return done(err) }
+          counter.next()
         }
-      );
+      )
 
       request.put(
         {url: url, body: bodyTwo, json: true},
-        function (err, response, body) {
-          if (err) { return done(err); }
-          counter.next();
+        (err, response, body) => {
+          if (err) { return done(err) }
+          counter.next()
         }
-      );
+      )
 
       request.put(
         {url: url, body: bodyThree, json: true},
-        function (err, response, body) {
-          if (err) { return done(err); }
-          counter.next();
+        (err, response, body) => {
+          if (err) { return done(err) }
+          counter.next()
         }
-      );
-    });
-  }); // end 'PUT /'
+      )
+    })
+  }) // end 'PUT /'
 
-  describe('app', function() {
-    var server;
-    before(function (done) {
-      server = app.getInstance().listen(process.env.PORT, done);
-    });
+  describe('app', () => {
+    var server
+    before((done) => {
+      server = app.getInstance().listen(process.env.PORT, done)
+    })
 
-    after(function (done) {
-      server.close(done);
-    });
+    after((done) => {
+      server.close(done)
+    })
 
-    it('should return a 404 for an unknown route', function(done) {
-      var url = 'http://127.0.0.1:' + process.env.PORT + '/not-there';
-      request.get({ url: url, json: true }, function (err, response, body) {
-        expect(body.statusCode).to.equal(404);
-        expect(body.error).to.equal('Not Found');
-        done();
-      });
-    });
-  });
-}); // end 'functional'
+    it('should return a 404 for an unknown route', (done) => {
+      const url = `http://127.0.0.1:${process.env.PORT}/not-there`
+      request.get({ url: url, json: true }, (err, response, body) => {
+        if (err) { return done(err) }
+        expect(body.statusCode).to.equal(404)
+        expect(body.error).to.equal('Not Found')
+        done()
+      })
+    })
+  })
+}) // end 'functional'
