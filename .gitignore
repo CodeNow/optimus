@@ -2,3 +2,5 @@ node_modules/
 doc/
 .DS_Store
 npm-debug.log
+client.es5.js
+
