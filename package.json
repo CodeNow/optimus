@@ -20,10 +20,6 @@
     "type": "git",
     "url": "https://github.com/CodeNow/optimus.git"
   },
-  "jshintConfig": {
-    "node": true,
-    "curly": true
-  },
   "keywords": [
     "filesystem",
     "transformation",
