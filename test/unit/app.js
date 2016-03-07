@@ -1,120 +1,154 @@
-'use strict';
+'use strict'
 
-var Lab = require('lab');
-var lab = exports.lab = Lab.script();
-var describe = lab.describe;
-var it = lab.it;
-var before = lab.before;
-var beforeEach = lab.beforeEach;
-var after = lab.after;
-var afterEach = lab.afterEach;
-var Code = require('code');
-var expect = Code.expect;
-var sinon = require('sinon');
-var rewire = require('rewire');
-var noop = require('101/noop');
+const Lab = require('lab')
+const lab = exports.lab = Lab.script()
+const describe = lab.describe
+const it = lab.it
+const beforeEach = lab.beforeEach
+const afterEach = lab.afterEach
+const Code = require('code')
+const expect = Code.expect
+const sinon = require('sinon')
+const noop = require('101/noop')
 
-require('loadenv')('optimus:env');
+require('loadenv')('optimus:env')
 
-describe('app', function() {
-  var app;
-  var middleware;
+const App = require('../../lib/app')
+const Boom = require('boom')
 
-  beforeEach(function (done) {
-    app = rewire('../../lib/app');
-    sinon.stub(app.__get__('app'), 'use');
-    sinon.stub(app.__get__('app'), 'put');
-    app.__set__('middleware.bodyParser', { json: noop });
-    middleware = app.__get__('middleware');
-    sinon.spy(middleware, 'connectDatadog');
-    sinon.spy(middleware, 'logger');
-    sinon.spy(middleware.bodyParser, 'json');
-    done();
-  });
+describe('app', () => {
+  describe('getInstance', () => {
+    beforeEach((done) => {
+      sinon.stub(App, 'addMiddlewares')
+      done()
+    })
 
-  afterEach(function (done) {
-    app.__get__('app').use.restore();
-    middleware.connectDatadog.restore();
-    middleware.bodyParser.json.restore();
-    middleware.logger.restore();
-    done();
-  });
+    afterEach((done) => {
+      App.addMiddlewares.restore()
+      done()
+    })
 
-  describe('interface', function() {
-    it('should expose the `getInstance` method', function(done) {
-      expect(app.getInstance).to.be.a.function();
-      done();
-    });
-  }); // end 'interface'
+    it('should return an express application', (done) => {
+      expect(App.getInstance()).to.exist()
+      expect(App.getInstance().put).to.be.a.function()
+      expect(App.getInstance().use).to.be.a.function()
+      done()
+    })
 
-  describe('getInstance', function() {
-    it('should only initialize the application once', function(done) {
-      expect(app.__get__('initialized')).to.be.false();
-      var instance = app.getInstance();
-      expect(app.__get__('initialized')).to.be.true();
-      app.getInstance();
-      expect(middleware.bodyParser.json.calledOnce).to.be.true();
-      done();
-    });
+    it('should add middlewares to the application', (done) => {
+      const app = App.getInstance()
+      expect(App.addMiddlewares.calledOnce).to.be.true()
+      expect(App.addMiddlewares.calledWith(app)).to.be.true()
+      done()
+    })
+  }) // end 'getInstance'
 
-    it('should return the express application', function(done) {
-      var instance = app.getInstance();
-      expect(instance).to.equal(app.__get__('app'));
-      expect(instance.listen).to.be.a.function();
-      done();
-    });
+  describe('addMiddlewares', () => {
+    const mock = {
+      app: {
+        put: noop,
+        use: noop
+      },
+      middleware: {
+        connectDatadog: 'datadawgz',
+        logger: 'loggaz'
+      }
+    }
 
-    it('should use JSON body parser', function(done) {
-      var instance = app.getInstance();
-      expect(middleware.bodyParser.json.calledOnce).to.be.true();
-      var bodyParserJSON = middleware.bodyParser.json.returnValues[0];
-      expect(instance.use.calledWith(bodyParserJSON)).to.be.true();
-      done();
-    });
+    beforeEach((done) => {
+      sinon.stub(App.middleware, 'connectDatadog')
+        .returns(mock.middleware.connectDatadog)
+      sinon.stub(App.middleware, 'logger')
+        .returns(mock.middleware.logger)
+      sinon.stub(mock.app, 'put')
+      sinon.stub(mock.app, 'use')
+      App.addMiddlewares(mock.app)
+      done()
+    })
 
-    it('should set the `PUT /` route', function(done) {
-      var instance = app.getInstance();
-      expect(instance.put.calledWith('/', middleware.applyRules)).to.be.true();
-      done();
-    });
+    afterEach((done) => {
+      App.middleware.connectDatadog.restore()
+      App.middleware.logger.restore()
+      mock.app.put.restore()
+      mock.app.use.restore()
+      done()
+    })
 
-    it('should set a 404 handler', function(done) {
-      var instance = app.getInstance();
-      expect(instance.use.calledWith(middleware.notFound)).to.be.true();
-      done();
-    });
+    it('should add the logger middleware', (done) => {
+      expect(mock.app.use.calledWith(mock.middleware.logger)).to.be.true()
+      done()
+    })
 
-    it('should not use connect-datadog outside of production', function(done) {
-      app.getInstance();
-      expect(middleware.connectDatadog.callCount).to.equal(0);
-      done();
-    });
+    it('should add the JSON body parser middleware', (done) => {
+      expect(mock.app.use.calledWith(App.middleware.bodyParser)).to.be.true()
+      done()
+    })
 
-    it('should use connect-datadog in production', function(done) {
-      var nodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+    it('should add the applyRules middleware', (done) => {
+      expect(mock.app.put.calledWith('/', App.middleware.applyRules))
+        .to.be.true()
+      done()
+    })
 
-      var instance = app.getInstance();
-      expect(middleware.connectDatadog.calledOnce).to.be.true();
-      var connectDatadog = middleware.connectDatadog.returnValues[0];
-      expect(instance.use.calledWith(connectDatadog)).to.be.true();
+    it('should add the notFound middleware', (done) => {
+      expect(mock.app.use.calledWith(App.middleware.notFound)).to.be.true()
+      done()
+    })
 
-      process.env.NODE_ENV = nodeEnv;
-      done();
-    });
+    it('should add the error middleware', (done) => {
+      expect(mock.app.use.calledWith(App.middleware.error)).to.be.true()
+      done()
+    })
 
-    it('should use bunyan logging', function(done) {
-      var instance = app.getInstance();
-      expect(middleware.logger.calledOnce).to.be.true();
-      var logger = middleware.logger.returnValues[0];
-      expect(instance.use.calledWith(logger)).to.be.true();
-      done();
-    });
+    it('should not add the datadog middleware', (done) => {
+      expect(mock.app.use.calledWith(mock.middleware.connectDatadog))
+        .to.be.false()
+      done()
+    })
 
-    it('should use the error handler middleware', function(done) {
-      var instance = app.getInstance();
-      expect(instance.use.calledWith(middleware.error)).to.be.true();
-      done();
-    });
-  }); // end 'getInstance'
-}); // end 'app'
+    describe('in production', () => {
+      var previousEnv
+
+      beforeEach((done) => {
+        previousEnv = process.env.NODE_ENV
+        process.env.NODE_ENV = 'production'
+        App.addMiddlewares(mock.app)
+        done()
+      })
+
+      afterEach((done) => {
+        process.env.NODE_ENV = previousEnv
+        done()
+      })
+
+      it('should add the datadog middleware', (done) => {
+        expect(mock.app.use.calledWith(mock.middleware.connectDatadog))
+          .to.be.true()
+        done()
+      })
+    }) // end 'in production'
+  }) // end 'addMiddlewares'
+
+  describe('middleware', () => {
+    const mock = { notFound: 'not-found-error' }
+
+    beforeEach((done) => {
+      sinon.stub(Boom, 'notFound').returns(mock.notFound)
+      done()
+    })
+
+    afterEach((done) => {
+      Boom.notFound.restore()
+      done()
+    })
+
+    describe('notFound', () => {
+      it('should pass a boom not-found to the `next` callback', (done) => {
+        App.middleware.notFound(null, null, (value) => {
+          expect(value).to.equal(mock.notFound)
+          done()
+        })
+      })
+    }) // end 'notFound'
+  }) // end 'middleware'
+}) // end 'app'

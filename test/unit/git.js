@@ -1,155 +1,138 @@
-'use strict';
+'use strict'
 
-var Lab = require('lab');
-var lab = exports.lab = Lab.script();
-var describe = lab.describe;
-var it = lab.it;
-var beforeEach = lab.beforeEach;
-var afterEach = lab.afterEach;
-var Code = require('code');
-var expect = Code.expect;
-var sinon = require('sinon');
+const Lab = require('lab')
+const lab = exports.lab = Lab.script()
+const describe = lab.describe
+const it = lab.it
+const beforeEach = lab.beforeEach
+const afterEach = lab.afterEach
+const Code = require('code')
+const expect = Code.expect
+const sinon = require('sinon')
 
-require('loadenv')('optimus:env');
-var Git = require('../../lib/git');
-var deployKey = require('../../lib/deploy-key');
+require('loadenv')('optimus:env')
+const Git = require('../../lib/git')
+const deployKey = require('../../lib/deploy-key')
 
-describe('Git', function() {
-  var key = '/some/deploy/key';
-  var path = '/working/path';
-  var git;
+describe('Git', () => {
+  const key = '/some/deploy/key'
+  const path = '/working/path'
+  var git
 
-  beforeEach(function (done) {
-    git = new Git(key, path);
-    sinon.stub(deployKey, 'exec').yieldsAsync();
-    sinon.spy(Git.log, 'trace');
-    done();
-  });
+  beforeEach((done) => {
+    git = new Git(key, path)
+    sinon.stub(deployKey, 'exec').yieldsAsync()
+    sinon.spy(Git.log, 'trace')
+    done()
+  })
 
-  afterEach(function (done) {
-    deployKey.exec.restore();
-    Git.log.trace.restore();
-    done();
-  });
+  afterEach((done) => {
+    deployKey.exec.restore()
+    Git.log.trace.restore()
+    done()
+  })
 
-  describe('interface', function() {
-    it('should expose the Git class', function(done) {
-      expect(Git).to.be.a.function();
-      done();
-    });
-  }); // end 'interface'
+  describe('_setup', () => {
+    it('should set the appropriate instance variables', (done) => {
+      const key = 'dat/key'
+      const path = '/dat/path'
+      git._setup(key, path)
+      expect(git.key).to.equal(key)
+      expect(git.path).to.equal(path)
+      done()
+    })
+  })
 
-  describe('constructor', function () {
-    it('should call _setup', function(done) {
-      var _setup = sinon.spy(Git.prototype, '_setup');
-      new Git('a', 'b');
-      expect(_setup.calledWith('a', 'b')).to.be.true();
-      Git.prototype._setup.restore();
-      done();
-    });
-  });
+  describe('clone', () => {
+    it('should perform `git clone` for the repository', (done) => {
+      const repo = 'git@github.com:Org/Repo'
+      git.clone(repo, () => {
+        const command = 'git clone -q ' + repo + ' ' + path
+        expect(deployKey.exec.calledOnce).to.be.true()
+        expect(deployKey.exec.calledWith(key, command)).to.be.true()
+        done()
+      })
+    })
 
-  describe('_setup', function() {
-    it('should set the appropriate instance variables', function(done) {
-      var key = 'dat/key';
-      var path = '/dat/path';
-      git._setup(key, path);
-      expect(git.key).to.equal(key);
-      expect(git.path).to.equal(path);
-      done();
-    });
-  });
+    it('should should use the specified path when supplied', (done) => {
+      const repo = 'git@github.com:Org/Repo'
+      const givenPath = '/woot/sauce/go/now'
+      git.clone(repo, givenPath, () => {
+        const command = 'git clone -q ' + repo + ' ' + givenPath
+        expect(deployKey.exec.calledOnce).to.be.true()
+        expect(deployKey.exec.calledWith(key, command)).to.be.true()
+        done()
+      })
+    })
 
-  describe('clone', function() {
-    it('should perform `git clone` for the repository', function(done) {
-      var repo = 'git@github.com:Org/Repo';
-      git.clone(repo, function () {
-        var command = 'git clone -q ' + repo + ' ' + path;
-        expect(deployKey.exec.calledOnce).to.be.true();
-        expect(deployKey.exec.calledWith(key, command)).to.be.true();
-        done();
-      });
-    });
-
-    it('should should use the specified path when supplied', function(done) {
-      var repo = 'git@github.com:Org/Repo';
-      var givenPath = '/woot/sauce/go/now';
-      git.clone(repo, givenPath, function() {
-        var command = 'git clone -q ' + repo + ' ' + givenPath;
-        expect(deployKey.exec.calledOnce).to.be.true();
-        expect(deployKey.exec.calledWith(key, command)).to.be.true();
-        done();
-      });
-    });
-
-    it('should log the clone at `trace`', function(done) {
-      var repo = 'git@github.com:Michigan/Eucher';
-      var path = '/gonna/cheat';
-      git.clone(repo, path, function () {
+    it('should log the clone at `trace`', (done) => {
+      const repo = 'git@github.com:Michigan/Eucher'
+      const path = '/gonna/cheat'
+      git.clone(repo, path, () => {
         expect(Git.log.trace.calledWith('Git: cloning ' + repo + ' to ' + path))
-          .to.be.true();
-        done();
-      });
-    });
-  });
+          .to.be.true()
+        done()
+      })
+    })
+  })
 
-  describe('getSHA', function() {
-    it('should get the SHA for the HEAD commit of the repo', function(done) {
-      git.getSHA(function () {
-        var command = 'git rev-parse HEAD';
-        var options = { cwd: path }
-        expect(deployKey.exec.calledOnce).to.be.true();
-        expect(deployKey.exec.calledWith(key, command, options)).to.be.true();
-        done();
-      });
-    });
+  describe('getSHA', () => {
+    it('should get the SHA for the HEAD commit of the repo', (done) => {
+      git.getSHA(() => {
+        const command = 'git rev-parse HEAD'
+        const options = { cwd: path }
+        expect(deployKey.exec.calledOnce).to.be.true()
+        expect(deployKey.exec.calledWith(key, command, options)).to.be.true()
+        done()
+      })
+    })
 
-    it('should log rev-parse at `trace`', function(done) {
-      git.getSHA(function() {
-        expect(Git.log.trace.calledWith('Git: SHA from head')).to.be.true();
-        done();
-      });
-    });
-  });
+    it('should log rev-parse at `trace`', (done) => {
+      git.getSHA(() => {
+        expect(Git.log.trace.calledWith('Git: SHA from head')).to.be.true()
+        done()
+      })
+    })
+  })
 
-  describe('fetchAll', function() {
-    it('should fetch all information for a repository', function(done) {
-      git.fetchAll(function () {
-        var command = 'git fetch --all';
-        var options = { cwd: path }
-        expect(deployKey.exec.calledOnce).to.be.true();
-        expect(deployKey.exec.calledWith(key, command, options)).to.be.true();
-        done();
-      });
-    });
+  describe('fetchAll', () => {
+    it('should fetch all information for a repository', (done) => {
+      git.fetchAll(() => {
+        const command = 'git fetch --all'
+        const options = { cwd: path }
+        expect(deployKey.exec.calledOnce).to.be.true()
+        expect(deployKey.exec.calledWith(key, command, options)).to.be.true()
+        done()
+      })
+    })
 
-    it('should log the fetch at `trace`', function(done) {
-      git.fetchAll(function () {
-        expect(Git.log.trace.calledWith('Git: fetch all')).to.be.true();
-        done();
-      });
-    });
-  });
+    it('should log the fetch at `trace`', (done) => {
+      git.fetchAll(() => {
+        expect(Git.log.trace.calledWith('Git: fetch all')).to.be.true()
+        done()
+      })
+    })
+  })
 
-  describe('checkout', function() {
-    it('should checkout given a commitish', function(done) {
-      var commitish = 'usetheforce';
-      git.checkout(commitish, function () {
-        var command = 'git checkout -q ' + commitish;
-        var options = { cwd: path }
-        expect(deployKey.exec.calledOnce).to.be.true();
-        expect(deployKey.exec.calledWith(key, command, options)).to.be.true();
-        done();
-      });
-    });
+  describe('checkout', () => {
+    it('should checkout given a commitish', (done) => {
+      const commitish = 'usetheforce'
+      git.checkout(commitish, () => {
+        const command = 'git checkout -q ' + commitish
+        const options = { cwd: path }
+        expect(deployKey.exec.calledOnce).to.be.true()
+        expect(deployKey.exec.calledWith(key, command, options)).to.be.true()
+        done()
+      })
+    })
 
-    it('should log the checkout at `trace`', function(done) {
-      var commitish = 'superduperss';
-      git.checkout(commitish, function () {
+    it('should log the checkout at `trace`', (done) => {
+      const commitish = 'superduperss'
+      git.checkout(commitish, () => {
         expect(Git.log.trace.calledWith('Git: checkout ' + commitish))
-          .to.be.true();
-        done();
-      });
-    });
-  }); // end 'checkout'
-});
+          .to.be.true()
+        done()
+      })
+    })
+  }) // end 'checkout'
+})
