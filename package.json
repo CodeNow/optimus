@@ -1,6 +1,6 @@
 {
   "name": "optimus",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "Transformer service for user repositories",
   "main": "index.js",
   "scripts": {
