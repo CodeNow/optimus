@@ -20,7 +20,11 @@ describe('functional', () => {
   before((done) => {
     fixtureCache.create((err) => {
       if (err) { return done(err) }
-      server = app.getInstance().listen(process.env.PORT, done)
+      app.start().asCallback((err, s) => {
+        if (err) { return done(err) }
+        server = s
+        done()
+      })
     })
   })
 
