@@ -62,7 +62,7 @@ describe('functional', () => {
       }
       client.transform(options, (err, resp) => {
         if (err) { return done(err) }
-        expect(resp.statusCode).to.equal(404)
+        expect(resp.statusCode).to.equal(500)
         done()
       })
     })

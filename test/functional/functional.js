@@ -27,7 +27,7 @@ describe('functional', () => {
 
   describe('deploy-key', () => {
     it('should fetch deploy keys from S3', (done) => {
-      deployKey.fetch('mock/key', (err) => {
+      deployKey.fetch('mock/key').asCallback((err) => {
         if (err) { return done(err) }
         const keyPath = process.env.DEPLOY_KEY_CACHE + '/mock.key/ssh-key'
         const mockPath = applicationRoot + '/test/fixtures/mock-ssh-key'
@@ -40,7 +40,7 @@ describe('functional', () => {
     })
 
     it('should return an error if the deploy key was not found', (done) => {
-      deployKey.fetch('/not/a/thing', (err) => {
+      deployKey.fetch('/not/a/thing').asCallback((err) => {
         expect(err.code).to.equal('NoSuchKey')
         done()
       })
@@ -52,7 +52,7 @@ describe('functional', () => {
     var keyPath
 
     before((done) => {
-      deployKey.fetch('optimus-private', (err, path) => {
+      deployKey.fetch('optimus-private').asCallback((err, path) => {
         if (err) { return done(err) }
         keyPath = path
         done()
@@ -62,7 +62,7 @@ describe('functional', () => {
     it('should clone a repository', (done) => {
       const repo = 'git@github.com:CodeNow/optimus-private-test'
       const commitish = '170bdd7672b75c4a51e394cf5217c97817321b32'
-      repository.fetch(keyPath, repo, commitish, (err, path) => {
+      repository.fetch(keyPath, repo, commitish).asCallback((err, path) => {
         if (err) { return done(err) }
         expect(fs.existsSync(path + '/A.txt')).to.be.true()
         expect(fs.existsSync(path + '/B.txt')).to.be.true()
@@ -75,7 +75,7 @@ describe('functional', () => {
     it('should checkout a different commitish of the same repo', (done) => {
       const repo = 'git@github.com:CodeNow/optimus-private-test'
       const commitish = '8dc308afc20330948e74d0b85c116572326ecee5'
-      repository.fetch(keyPath, repo, commitish, (err, path) => {
+      repository.fetch(keyPath, repo, commitish).asCallback((err, path) => {
         if (err) { return done(err) }
         expect(fs.existsSync(path + '/A.txt')).to.be.true()
         expect(fs.existsSync(path + '/B.txt')).to.be.true()
@@ -89,7 +89,7 @@ describe('functional', () => {
       const repo = 'git@github.com:CodeNow/optimus-private-test'
       const commitish = '8dc308afc20330948e74d0b85c116572326ecee5'
       const spy = sinon.spy(fs.existsSync)
-      repository.fetch(keyPath, repo, commitish, (err, path) => {
+      repository.fetch(keyPath, repo, commitish).asCallback((err, path) => {
         if (err) { return done(err) }
         expect(spy.calledWith(keyPath)).to.be.false()
         done()
@@ -99,7 +99,7 @@ describe('functional', () => {
     it('should yield an error if the SSH key is missing', (done) => {
       const repo = 'git@github.com:CodeNow/optimus-private-test'
       const commitish = 'adifferentcommitish'
-      repository.fetch('bogus-/keyzz', repo, commitish, (err, path) => {
+      repository.fetch('bogus-/keyzz', repo, commitish).asCallback((err, path) => {
         expect(err).to.not.be.null()
         expect(path).to.be.undefined()
         done()
@@ -211,8 +211,8 @@ describe('functional', () => {
       const url = `http://127.0.0.1:${process.env.PORT}/not-there`
       request.get({ url: url, json: true }, (err, response, body) => {
         if (err) { return done(err) }
-        expect(body.statusCode).to.equal(404)
-        expect(body.error).to.equal('Not Found')
+        expect(response.statusCode).to.equal(404)
+        expect(body).to.equal('Not Found')
         done()
       })
     })

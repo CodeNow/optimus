@@ -51,7 +51,8 @@ module.exports = class FixtureCache {
       ].join('/')
     })
     // TODO This is strange, why do we need to require here as opposed to above?
-    require('../../lib/cache').initialize(done)
+    require('../../lib/cache').initialize()
+      .asCallback(done)
   }
 
   /**
