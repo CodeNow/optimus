@@ -54,7 +54,7 @@
     "cluster-man": "^1.1.1",
     "connect-datadog": "0.0.5",
     "debug": "^2.1.3",
-    "error-cat": "git+ssh://git@github.com/runnable/error-cat.git#fix-fingerprint",
+    "error-cat": "^2.0.4",
     "express": "^4.12.3",
     "express-bunyan-logger": "^1.1.1",
     "fs-transform": "7.1.0",
