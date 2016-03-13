@@ -9,7 +9,9 @@ const monitor = require('monitor-dog')
 const log = require('./lib/logger').child({ module: 'index' })
 
 cache.initialize()
-  .then(app.start)
+  .then(() => {
+    return app.start()
+  })
   .then(() => { monitor.histogram('status', 1) })
   .catch(cat.catch)
   .catch((err) => {
