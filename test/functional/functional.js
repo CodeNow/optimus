@@ -216,5 +216,16 @@ describe('functional', () => {
         done()
       })
     })
+
+    it('should return the version and name on version route', (done) => {
+      const url = `http://127.0.0.1:${process.env.PORT}/version`
+      request.get({ url: url, json: true }, (err, response, body) => {
+        if (err) { return done(err) }
+        expect(response.statusCode).to.equal(200)
+        expect(body.name).to.equal('optimus')
+        expect(body.version).to.match(/\d+\.\d+\.\d+/)
+        done()
+      })
+    })
   })
 }) // end 'functional'
