@@ -1,5 +1,5 @@
 {
-  "name": "optimus",
+  "name": "@runnable/optimus",
   "version": "5.1.0",
   "description": "Transformer service for user repositories",
   "main": "index.js",
